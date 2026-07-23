@@ -10,6 +10,7 @@ pytest.ini
 tests/
 docs/DEPLOY.md
 docs/PLAN.md
+docs/BOTFATHER.md
 
 # Python
 __pycache__/

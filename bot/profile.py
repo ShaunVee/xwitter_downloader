@@ -6,7 +6,7 @@ diffable and survives a rebuild on a fresh host.
 
 Two things the Bot API deliberately can't set, so BotFather keeps them:
 the display name (rate-limited, changed rarely) and the profile photo (no
-API method at all). Both are covered in docs/BOTFATHER.md.
+API method at all). Both are set by hand in BotFather.
 """
 
 from __future__ import annotations
