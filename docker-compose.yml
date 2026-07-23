@@ -1,0 +1,34 @@
+services:
+  bot:
+    build: .
+    image: xwitter-downloader:latest
+    container_name: xwitter-downloader
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # Overrides .env so the paths always match the volumes below.
+      CACHE_DB: /data/cache.sqlite
+      TMP_DIR: /tmp/xdl
+    volumes:
+      # file_id cache. Must survive restarts, or every video gets re-fetched.
+      - cache:/data
+      # Scratch space for downloads and transcodes. Disk-backed so this runs on a
+      # small VPS; files are deleted as soon as each job finishes.
+      #
+      # On a host with RAM to spare (8 GB+), swapping this for a tmpfs keeps the
+      # churn off the disk entirely:
+      #     - type: tmpfs
+      #       target: /tmp/xdl
+      #       tmpfs:
+      #         size: 2g
+      - scratch:/tmp/xdl
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  cache:
+  scratch:

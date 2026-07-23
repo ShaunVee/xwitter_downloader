@@ -1,0 +1,49 @@
+# Secrets — never commit
+# `.env` and `*.env` miss dotted variants like `.env.local`, so match those too.
+.env
+*.env
+.env.*
+
+# Not published — this is a public, user-facing repo, not a dev repo.
+.env.example
+pytest.ini
+tests/
+docs/DEPLOY.md
+docs/PLAN.md
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+
+# Test & build artifacts
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+build/
+dist/
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# Runtime data
+data/
+*.sqlite
+*.sqlite-journal
+tmp/
+
+# Downloaded media should never land in the repo
+*.mp4
+*.mov
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
