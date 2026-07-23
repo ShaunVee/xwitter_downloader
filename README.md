@@ -39,6 +39,8 @@ That's the whole interface. Nothing to install, no account to make, no site to v
 
 ## What it does
 
+| | |
+|---|---|
 | 🎬 | **Real mp4 files**, playable inline and saveable — not a link to a mirror site |
 | 🖼️ | **Multi-video posts**, GIFs as looping animations, photos at original resolution |
 | 🔗 | **`t.co` short links** resolved automatically |
