@@ -3,7 +3,7 @@
 Two jobs:
 
 1. `probe()` reads the *actual* dimensions and duration off the downloaded file.
-   This is not optional politeness — the APIs lie. For tweet 1578401165338976258
+   This is not optional politeness: the APIs lie. For tweet 1578401165338976258
    fxtwitter reports 1080x1080 while the file served is 720x720, and feeding
    Telegram the wrong dimensions makes its inline player render the video wrong.
 
@@ -29,7 +29,7 @@ AUDIO_BITRATE_KBPS = 128
 # link instead of a smeared mess. Roughly: anything over ~45 min at a 48 MB cap.
 MIN_VIDEO_BITRATE_KBPS = 150
 
-# Encoding overhead fudge — container and muxing cost a little over the raw streams.
+# Encoding overhead fudge: container and muxing cost a little over the raw streams.
 SIZE_SAFETY = 0.95
 
 
@@ -62,7 +62,7 @@ async def _run(*args: str) -> tuple[int, bytes, bytes]:
 
 
 async def probe(path: Path) -> Probe:
-    """Read real dimensions/duration from the file. Never raises — returns blanks."""
+    """Read real dimensions/duration from the file. Never raises: returns blanks."""
     code, stdout, stderr = await _run(
         "ffprobe",
         "-v", "error",

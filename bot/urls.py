@@ -26,7 +26,7 @@ _TWEET_HOSTS = {
     "nitter.net",
 }
 
-# /<user>/status/<id> — also matches /i/web/status/<id> and /statuses/<id>.
+# /<user>/status/<id>, also matches /i/web/status/<id> and /statuses/<id>.
 _STATUS_RE = re.compile(
     r"^/(?:[^/]+/)*status(?:es)?/(?P<id>\d{5,25})", re.IGNORECASE
 )

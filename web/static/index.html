@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- video.twimg.com 403s any request carrying a Referer that isn't x.com. The
+     download path sets referrerPolicy explicitly; this covers everything else
+     the page fetches, and leaks nothing to X either way. -->
+<meta name="referrer" content="no-referrer">
+<title>justthefile: download video from X (Twitter)</title>
+<meta name="description" content="Paste a link to an X post, get the video as a real mp4. No mirror page, no ads, no account, no watermark.">
+<link rel="canonical" href="https://justthefile.com/">
+<link rel="icon" href="/logo.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/logo.png">
+<link rel="stylesheet" href="/styles.css">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="justthefile">
+<meta property="og:url" content="https://justthefile.com/">
+<meta property="og:title" content="justthefile: download video from X (Twitter)">
+<meta property="og:description" content="Paste a link to an X post, get the video as a real mp4. No mirror page, no ads, no account, no watermark.">
+<meta property="og:image" content="https://justthefile.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<!-- og.png is a real 1200x630 card now, so the wide format has something to
+     show instead of centre-cropping a square into a letterbox strip. -->
+<meta name="twitter:card" content="summary_large_image">
+</head>
+<body>
+
+<main>
+  <header class="masthead">
+    <img src="/logo.svg" alt="" width="56" height="56" class="logo">
+    <h1 class="wordmark">just<span>the</span>file</h1>
+    <p class="tagline">Paste a link. Get the video as a real mp4, with no mirror page and no ads.</p>
+  </header>
+
+  <form id="resolve-form" autocomplete="off">
+    <div class="field">
+      <input
+        id="url"
+        name="url"
+        type="text"
+        inputmode="url"
+        spellcheck="false"
+        placeholder="https://x.com/user/status/1234567890"
+        aria-label="Link to a post"
+        required>
+      <button type="submit" id="submit">Get file</button>
+    </div>
+    <!-- Static text is the fallback; app.js rewrites this from /api/platforms,
+         so the line stays honest as the registry grows. -->
+    <p class="hint" id="supported">Works with X (Twitter) links.</p>
+  </form>
+
+  <p id="message" class="message" role="status" aria-live="polite" hidden></p>
+
+  <section id="results" class="results" aria-live="polite"></section>
+
+  <footer>
+    <p>
+      Files download straight from the source to your browser. Nothing is stored
+      here, and nobody records what you asked for.
+    </p>
+    <p>
+      Prefer Telegram? There's a bot for X posts:
+      <a href="https://t.me/xwitter_downloader_bot" rel="noopener">@xwitter_downloader_bot</a>
+    </p>
+  </footer>
+</main>
+
+<template id="media-card">
+  <article class="card">
+    <div class="preview">
+      <img class="thumb" alt="" loading="lazy" hidden>
+      <div class="thumb placeholder" aria-hidden="true"></div>
+      <span class="badge"></span>
+    </div>
+    <div class="options">
+      <p class="meta"></p>
+      <div class="qualities"></div>
+      <div class="progress" hidden>
+        <div class="bar"><span></span></div>
+        <p class="progress-label"></p>
+      </div>
+    </div>
+  </article>
+</template>
+
+<script src="/app.js"></script>
+</body>
+</html>

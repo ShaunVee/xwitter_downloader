@@ -52,7 +52,7 @@ class Config:
         if not token:
             raise SystemExit(
                 "TELEGRAM_BOT_TOKEN is not set. Put it in a .env file next to "
-                "docker-compose.yml — see the README's Quick start."
+                "docker-compose.yml: see the README's Quick start."
             )
 
         mode = os.environ.get("ACCESS_MODE", "private").strip().lower()
@@ -64,7 +64,7 @@ class Config:
         allowed = _ids(os.environ.get("ALLOWED_USER_IDS", ""))
         if mode in {"private", "allowlist"} and not allowed:
             raise SystemExit(
-                f"ACCESS_MODE={mode} but ALLOWED_USER_IDS is empty — the bot would "
+                f"ACCESS_MODE={mode} but ALLOWED_USER_IDS is empty: the bot would "
                 "ignore everyone, including you. Get your ID from @userinfobot."
             )
 

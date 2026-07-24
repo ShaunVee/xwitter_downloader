@@ -23,7 +23,7 @@ CHAIN = (syndication, fxtwitter)
 async def resolve(tweet_id: str, client: httpx.AsyncClient) -> TweetMedia:
     """Try each provider until one returns media.
 
-    Returns an empty TweetMedia if every provider comes up dry — the caller
+    Returns an empty TweetMedia if every provider comes up dry: the caller
     distinguishes "no media in this post" from "extraction is broken" by
     checking whether the post exists at all.
     """

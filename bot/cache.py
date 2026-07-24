@@ -1,7 +1,7 @@
 """Telegram file_id cache.
 
 Once Telegram accepts an upload it hands back a `file_id`, and re-sending that id
-costs zero egress and zero CPU — no download, no transcode, no upload. For one
+costs zero egress and zero CPU: no download, no transcode, no upload. For one
 user that's a nice speedup on a repeat link; the moment two people request the
 same viral post it's the difference between one fetch and N.
 
@@ -110,7 +110,7 @@ class FileIdCache:
             self._conn.commit()
 
     async def forget(self, tweet_id: str) -> None:
-        """Drop a tweet's entries — used when Telegram rejects a stale file_id."""
+        """Drop a tweet's entries, used when Telegram rejects a stale file_id."""
         if self._conn is None:
             return
         async with self._lock:

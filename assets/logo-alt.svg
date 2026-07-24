@@ -1,22 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#20262e"/>
-      <stop offset="1" stop-color="#0a0d11"/>
-    </linearGradient>
-  </defs>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="justthefile">
+  <title>justthefile</title>
 
-  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
-
-  <!-- X mark, official glyph, scaled from a 24x24 box -->
-  <g transform="translate(150 70) scale(8.6)">
-    <path fill="#ffffff" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+  <!-- Same mark as logo.svg with no plate behind it, for placing on a surface
+       that already has its own background. The page is drawn in currentColor
+       so it inverts with the host page's theme; only the folded corner is
+       pinned to the brand colour. -->
+  <g fill="currentColor">
+    <path fill-rule="evenodd" d="
+      M148 96 h132 l84 84 v236 a28 28 0 0 1 -28 28 h-188 a28 28 0 0 1 -28 -28 v-292 a28 28 0 0 1 28 -28 z
+      M232 196 h48 a12 12 0 0 1 12 12 v76 h34 a10 10 0 0 1 7.6 16.5 l-58 66 a10 10 0 0 1 -15.2 0 l-58 -66 a10 10 0 0 1 7.6 -16.5 h34 v-76 a12 12 0 0 1 12 -12 z"/>
   </g>
-
-  <!-- Download arrow into a tray -->
-  <g transform="translate(256 292)" fill="#1d9bf0">
-    <rect x="-12" y="0" width="24" height="46" rx="12"/>
-    <path d="M-42 34 H42 L0 88 Z"/>
-    <rect x="-84" y="104" width="168" height="24" rx="12"/>
-  </g>
+  <path fill="#6366f1" d="M280 96 l84 84 h-60 a24 24 0 0 1 -24 -24 z"/>
 </svg>

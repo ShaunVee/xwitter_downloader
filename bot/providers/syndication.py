@@ -3,7 +3,7 @@
     GET https://cdn.syndication.twimg.com/tweet-result?id=<id>&token=<token>
 
 This is the endpoint that powers embedded tweets. It needs no auth of any kind,
-and crucially it returns the *full variant ladder* — every mp4 bitrate X encoded,
+and crucially it returns the *full variant ladder*: every mp4 bitrate X encoded,
 plus duration. That ladder is what lets us pick a rendition that fits under
 Telegram's 50 MB cap instead of transcoding.
 
@@ -111,13 +111,14 @@ def _video_item(media: dict[str, Any]) -> Optional[MediaItem]:
         duration_s=(duration_ms / 1000.0) if duration_ms else None,
         width=original.get("width"),
         height=original.get("height"),
+        thumbnail=media.get("media_url_https"),
     )
 
 
 def _card_media(payload: dict[str, Any]) -> list[dict[str, Any]]:
     """Pull media entities out of a unified_card.
 
-    Videos attached as cards — amplify_video, promoted clips, swipeable carousels —
+    Videos attached as cards (amplify_video, promoted clips, swipeable carousels)
     are absent from `mediaDetails` entirely, and instead live in
     `card.binding_values.unified_card`, as a JSON *string* that has to be decoded
     separately. Their entries carry the same shape as mediaDetails, including the

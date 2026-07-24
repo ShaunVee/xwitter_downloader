@@ -42,6 +42,9 @@ class MediaItem:
     duration_s: Optional[float] = None
     width: Optional[int] = None
     height: Optional[int] = None
+    # Poster frame. Unused by the bot (Telegram generates its own), but the web
+    # UI shows it as a preview before the user commits to a download.
+    thumbnail: Optional[str] = None
 
     @property
     def mp4_variants_best_first(self) -> list[Variant]:

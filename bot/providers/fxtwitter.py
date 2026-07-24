@@ -60,6 +60,7 @@ def parse(payload: dict[str, Any], tweet_id: str) -> TweetMedia:
                 duration_s=video.get("duration"),
                 width=video.get("width"),
                 height=video.get("height"),
+                thumbnail=video.get("thumbnail_url"),
             )
         )
 

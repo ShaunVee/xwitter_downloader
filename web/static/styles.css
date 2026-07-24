@@ -1,0 +1,232 @@
+/* Dark by default (this is a tool people open at 2am) with a light scheme for
+   anyone whose OS asks for one. */
+
+:root {
+  color-scheme: dark light;
+  --bg: #0b1016;
+  --surface: #141c26;
+  --surface-2: #1b2634;
+  --line: #24313f;
+  --text: #e8eef5;
+  --muted: #8ba0b6;
+  /* Indigo, not the #1d9bf0 this started as: that is X's blue, and the site is
+     no longer an X tool. Matches the folded corner in the logo. */
+  --accent: #6366f1;
+  --accent-hover: #4f46e5;
+  --accent-ink: #ffffff;
+  --danger: #f4576b;
+  --radius: 14px;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.25);
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f5f8fb;
+    --surface: #ffffff;
+    --surface-2: #eef3f8;
+    --line: #dae3ec;
+    --text: #0f1922;
+    --muted: #5b6b7c;
+    --shadow: 0 1px 2px rgb(15 25 34 / 0.06), 0 8px 24px rgb(15 25 34 / 0.08);
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: clamp(1.5rem, 5vw, 4rem) 1.25rem 3rem;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto,
+        "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+main { max-width: 44rem; margin: 0 auto; }
+
+/* ---- masthead ---- */
+
+.masthead { text-align: center; margin-bottom: 2rem; }
+.logo { display: block; margin: 0 auto 0.75rem; border-radius: 12px; }
+
+h1 {
+  margin: 0 0 0.35rem;
+  font-size: clamp(1.6rem, 5vw, 2.1rem);
+  letter-spacing: -0.02em;
+}
+
+/* Wordmark reads as three words at one glance without needing three colours. */
+.wordmark span { color: var(--muted); }
+
+.tagline { margin: 0; color: var(--muted); }
+
+/* ---- form ---- */
+
+.field { display: flex; gap: 0.5rem; }
+
+input[type="text"] {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0.85rem 1rem;
+  font-size: 1rem;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+input[type="text"]::placeholder { color: var(--muted); opacity: 0.7; }
+
+input[type="text"]:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgb(99 102 241 / 0.28);
+}
+
+button {
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  transition: background 0.15s, transform 0.05s, opacity 0.15s;
+}
+
+button:active:not(:disabled) { transform: translateY(1px); }
+button:disabled { opacity: 0.55; cursor: default; }
+
+#submit {
+  flex: 0 0 auto;
+  padding: 0.85rem 1.35rem;
+  color: var(--accent-ink);
+  background: var(--accent);
+}
+
+#submit:hover:not(:disabled) { background: var(--accent-hover); }
+
+.hint { margin: 0.6rem 0.25rem 0; font-size: 0.85rem; color: var(--muted); }
+
+/* ---- messages ---- */
+
+.message {
+  margin: 1.5rem 0 0;
+  padding: 0.9rem 1.1rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--muted);
+  border-radius: 10px;
+}
+
+.message.error { border-left-color: var(--danger); }
+.message.busy { border-left-color: var(--accent); }
+
+/* ---- results ---- */
+
+.results { margin-top: 1.75rem; display: grid; gap: 1rem; }
+
+.card {
+  display: grid;
+  grid-template-columns: 9rem 1fr;
+  gap: 1.1rem;
+  padding: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+@media (max-width: 30rem) {
+  .card { grid-template-columns: 1fr; }
+}
+
+.preview { position: relative; }
+
+.thumb {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  background: var(--surface-2);
+  border-radius: 10px;
+}
+
+.thumb.placeholder { background: var(--surface-2); }
+
+.badge {
+  position: absolute;
+  left: 0.5rem;
+  bottom: 0.5rem;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #fff;
+  background: rgb(0 0 0 / 0.72);
+  border-radius: 999px;
+}
+
+.options { display: flex; flex-direction: column; gap: 0.7rem; min-width: 0; }
+
+.meta { margin: 0; font-size: 0.85rem; color: var(--muted); }
+
+.qualities { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+.quality {
+  padding: 0.55rem 0.9rem;
+  color: var(--text);
+  background: var(--surface-2);
+  border-color: var(--line);
+}
+
+.quality:hover:not(:disabled) { background: var(--accent); color: var(--accent-ink); }
+
+.quality .size { font-weight: 400; opacity: 0.7; margin-left: 0.35rem; }
+
+/* ---- download progress ---- */
+
+.bar {
+  height: 6px;
+  background: var(--surface-2);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.bar span {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--accent);
+  border-radius: inherit;
+  transition: width 0.15s linear;
+}
+
+.bar.indeterminate span {
+  width: 35%;
+  animation: slide 1.1s ease-in-out infinite;
+}
+
+@keyframes slide {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}
+
+.progress-label { margin: 0.4rem 0 0; font-size: 0.8rem; color: var(--muted); }
+
+/* ---- footer ---- */
+
+footer {
+  margin-top: 3rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+footer p { margin: 0.4rem 0; }
+footer a { color: var(--accent); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

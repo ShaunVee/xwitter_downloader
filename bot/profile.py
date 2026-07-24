@@ -1,7 +1,7 @@
 """The bot's public identity: the blurbs Telegram shows and the command menu.
 
 All user-facing copy lives here rather than in whatever was last typed into
-BotFather, and gets pushed on every startup — so the profile is reviewable,
+BotFather, and gets pushed on every startup, so the profile is reviewable,
 diffable and survives a rebuild on a fresh host.
 
 Two things the Bot API deliberately can't set, so BotFather keeps them:
@@ -24,7 +24,7 @@ SHORT_DESCRIPTION_LIMIT = 120
 DESCRIPTION_LIMIT = 512
 COMMAND_DESCRIPTION_LIMIT = 256
 
-# The display name — BotFather /setname. Kept here so it's recorded somewhere.
+# The display name, set with BotFather /setname. Kept here so it's recorded somewhere.
 NAME = "X Downloader"
 
 # Profile page, under the photo. Also what Telegram shows when the bot is
@@ -37,7 +37,7 @@ SHORT_DESCRIPTION = (
 # The empty-chat screen, shown above the Start button before anyone taps it.
 DESCRIPTION = (
     "Send me a link to an X (Twitter) post and I'll send the video back as an "
-    "mp4 — playable inline and saveable.\n\n"
+    "mp4, playable inline and saveable.\n\n"
     "• posts with several videos, in order\n"
     "• GIFs and images\n"
     "• t.co short links\n\n"
@@ -49,13 +49,13 @@ DESCRIPTION = (
 # In-chat reply to /start and /help.
 HELP = (
     "Send me a link to an X (Twitter) post and I'll send the video back as an "
-    "mp4 — playable inline and saveable.\n\n"
+    "mp4, playable inline and saveable.\n\n"
     "I also handle posts with several videos, GIFs, images and t.co short links.\n\n"
     "Videos over Telegram's 50 MB limit are compressed automatically; anything "
     "too long to compress comes back as a direct download link."
 )
 
-# The menu behind the "/" button. Only list commands that actually exist —
+# The menu behind the "/" button. Only list commands that actually exist:
 # a menu entry for a command with no handler is a dead end for the user.
 COMMANDS: tuple[tuple[str, str], ...] = (
     ("start", "What this bot does"),

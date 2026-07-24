@@ -18,7 +18,10 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 
+# One image, two entrypoints: the bot and the web front end share the whole
+# extraction pipeline, so building them separately would only duplicate it.
 COPY bot/ ./bot/
+COPY web/ ./web/
 
 # Run unprivileged. /data holds the file_id cache and must outlive the container.
 RUN useradd --create-home --uid 10001 botuser \
@@ -28,5 +31,6 @@ USER botuser
 
 VOLUME ["/data"]
 
-# No EXPOSE and no ports: long-polling is outbound-only.
+# The web service overrides this and publishes a port; the bot needs neither,
+# since long-polling is outbound-only.
 CMD ["python", "-m", "bot.main"]

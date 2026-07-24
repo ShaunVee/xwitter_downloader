@@ -1,7 +1,7 @@
 """Telegram bot entrypoint.
 
 Long-polling, not webhooks: polling is outbound-only, so there's no public
-endpoint, no TLS certificate and no inbound firewall rule to maintain — which
+endpoint, no TLS certificate and no inbound firewall rule to maintain, which
 removes most of the friction of running this on a cloud VM.
 """
 
@@ -114,7 +114,7 @@ class Runtime:
                 )
                 return
 
-            # Keep the original index — it's part of the cache key.
+            # Keep the original index: it's part of the cache key.
             playable = [
                 (i, item) for i, item in enumerate(tweet.items) if item.kind != PHOTO
             ]
@@ -385,7 +385,7 @@ def main() -> None:
     logging.getLogger("httpx").setLevel(logging.WARNING)
 
     if not transcode.available():
-        log.warning("ffmpeg/ffprobe not found — oversized videos cannot be compressed")
+        log.warning("ffmpeg/ffprobe not found: oversized videos cannot be compressed")
 
     build_application(cfg).run_polling(drop_pending_updates=True)
 

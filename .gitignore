@@ -1,10 +1,10 @@
-# Secrets — never commit
+# Secrets: never commit
 # `.env` and `*.env` miss dotted variants like `.env.local`, so match those too.
 .env
 *.env
 .env.*
 
-# Not published — this is a public, user-facing repo, not a dev repo.
+# Not published: this is a public, user-facing repo, not a dev repo.
 .env.example
 pytest.ini
 tests/

@@ -1,6 +1,6 @@
 """Bounded job queue.
 
-Handlers never do the work themselves — they enqueue and return immediately,
+Handlers never do the work themselves: they enqueue and return immediately,
 and a fixed pool of workers drains the queue. That indirection is the whole
 point: with inline work, a single user is fine but a handful of simultaneous
 requests would run several ffmpeg processes at once and wedge a small VPS.
@@ -75,7 +75,7 @@ class JobQueue:
         """Enqueue a job. Returns queue position. Raises QueueFull past the per-user cap."""
         if self._per_user[job.user_id] >= self._max_per_user:
             raise QueueFull(
-                f"you already have {self._max_per_user} requests queued — "
+                f"you already have {self._max_per_user} requests queued: "
                 "let those finish first"
             )
         self._per_user[job.user_id] += 1

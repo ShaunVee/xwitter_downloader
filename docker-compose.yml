@@ -29,6 +29,27 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  web:
+    build: .
+    image: xwitter-downloader:latest
+    container_name: xwitter-downloader-web
+    restart: unless-stopped
+    command: ["python", "-m", "web.api"]
+    env_file:
+      - .env
+    ports:
+      # Bound to loopback: put a TLS terminator (Caddy, nginx) in front rather
+      # than exposing this directly. Change to "8080:8080" to reach it from the
+      # LAN while testing.
+      - "127.0.0.1:8080:8080"
+    # No volumes: this process resolves links and returns JSON. It never
+    # downloads media, so it needs neither the cache nor scratch space.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 volumes:
   cache:
   scratch:
