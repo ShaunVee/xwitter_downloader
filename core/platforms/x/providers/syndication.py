@@ -21,7 +21,7 @@ from typing import Any, Optional
 
 import httpx
 
-from ..models import GIF, PHOTO, VIDEO, MediaItem, TweetMedia, Variant
+from core.models import GIF, PHOTO, VIDEO, MediaItem, TweetMedia, Variant
 
 log = logging.getLogger(__name__)
 

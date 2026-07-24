@@ -117,20 +117,43 @@ video incorrectly, so every file is `ffprobe`d after download and before upload.
 ```mermaid
 flowchart LR
     A[Paste link] --> B[GET /api/resolve]
-    B --> C[Same extraction chain]
+    B --> C[Platform registry]
     C --> D[JSON: the variant ladder]
-    D --> E[Browser fetches video.twimg.com]
-    E --> F[Blob -> saved as a named mp4]
+    D --> E{Does the CDN<br/>send CORS?}
+    E -- yes --> F[Browser fetches it direct]
+    E -- no --> G[/api/download streams it/]
+    G -.audio in a<br/>separate file.-> H[ffmpeg mux]
 ```
 
-**The server never touches the video.** `/api/resolve` returns a few KB of JSON,
-with every rendition labelled and sized, and the browser fetches the bytes straight
-from X's CDN. That deletes the expensive half of the problem: no bandwidth cost,
-no ffmpeg, no queue, no scratch disk. It is also *faster than the bot*, which has
-to download a file and then upload it to Telegram before you see anything.
+`/api/resolve` returns a few KB of JSON with every rendition labelled and sized.
+Where the bytes come from next depends on the platform, and that is not a
+preference: it is whatever its CDN permits.
 
-And because there's no Telegram, there's no 50 MB cap: the site offers the whole
-ladder at full quality, including files the bot has to compress or refuse.
+**X costs nothing to serve.** `video.twimg.com` reflects arbitrary origins in
+`Access-Control-Allow-Origin`, so the browser fetches the file itself and this
+server never sees it. No bandwidth, no ffmpeg, no queue. It is also *faster than
+the bot*, which has to download a file and then upload it to Telegram before you
+see anything. And with no Telegram there is no 50 MB cap, so the site offers the
+whole ladder at full quality, including files the bot has to compress or refuse.
+
+**Reddit mostly cannot work that way**, which was found by measuring rather than
+assuming:
+
+| Media | CDN | Delivery | Why |
+|---|---|---|---|
+| Video, no audio track | `v.redd.it` | direct | Sends `ACAO: *`, file is complete |
+| Video with audio | `v.redd.it` | proxy + mux | DASH keeps audio in its own file |
+| Image or gallery | `i.redd.it` | proxy | Sends no CORS header at all |
+
+Reddit's simplest media is the one a browser cannot fetch. So delivery is decided
+per item, not per platform, and `/api/download` exists for the cases that need
+this box in the path. Muxing copies both streams without re-encoding, so it costs
+I/O rather than CPU.
+
+That endpoint takes **indices, never URLs**. Every URL it touches is re-derived
+from our own resolution of the post, and checked against the platform's declared
+`MEDIA_HOSTS` before any fetch. Accepting a caller-supplied URL would make the
+box an open proxy, which is worth more to an attacker than anything else here.
 
 ```bash
 docker compose up -d          # bot + web

@@ -3,11 +3,12 @@
 Lives in its own module so a handler can import `Resolution` without importing
 the registry that imports the handler.
 
-A platform is a plain module exposing four names:
+A platform is a plain module exposing:
 
     NAME     stable slug, used in cache keys and the API payload
     LABEL    what a human is told is supported
     HOSTS    domains for the "works with…" hint on the page
+    DELIVERY how the bytes can reach the user (see below)
     identify(url, client)   -> post id, or None if this isn't ours
     fetch(post_id, client)  -> Resolution
 
@@ -24,15 +25,32 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Optional
 
-from bot.models import MediaItem
+from core.models import MediaItem
+
+# How a platform's bytes can get from its CDN to the user's disk. This is a
+# property of the CDN, not a preference, and it was measured rather than
+# assumed: see the probe results in the README.
+#
+#   DIRECT     The CDN sets Access-Control-Allow-Origin, so the browser fetches
+#              it and the server never sees the bytes. X only. Costs nothing.
+#   PROXY      No CORS header, so a browser cannot read the response at all and
+#              the server has to stream it through. TikTok.
+#   PROXY_MUX  As PROXY, and audio and video are separate files that ffmpeg has
+#              to join before the user gets something playable. Reddit.
+#
+# Telegram bots ignore this entirely: they always download server-side and
+# upload to Telegram, so every platform is deliverable that way.
+DIRECT = "direct"
+PROXY = "proxy"
+PROXY_MUX = "proxy_mux"
 
 
 @dataclass(frozen=True)
 class Resolution:
     """One post's media, normalized and platform-neutral.
 
-    Deliberately not `bot.models.TweetMedia`: that type is named for the one
-    platform the Telegram bot serves, and the whole point of this layer is that
+    Deliberately not `core.models.TweetMedia`: that type is named for the one
+    platform that shipped first, and the whole point of this layer is that
     nothing above it knows where a file came from. `MediaItem` and `Variant`
     are reused as-is: they were already neutral.
     """

@@ -42,6 +42,13 @@ class WebConfig:
     # post with many videos can't fan out into dozens of upstream requests.
     max_head_requests: int = 12
 
+    # Ceiling on anything routed through this box. Media the browser can fetch
+    # itself is unaffected; this only bounds proxied and muxed downloads.
+    max_proxy_mb: int = 300
+    # ffmpeg is the contended resource on a 1 vCPU VPS. Near-serial by default.
+    max_concurrent_muxes: int = 1
+    tmp_dir: str = "/tmp/justthefile"
+
     # Enable only when something in front of this actually sets the header.
     # Untrusted X-Forwarded-For is a free bypass of the per-IP rate limit.
     trust_proxy: bool = False
@@ -59,5 +66,8 @@ class WebConfig:
             resolve_ttl_s=_int("WEB_RESOLVE_TTL_S", 900),
             resolve_cache_size=_int("WEB_RESOLVE_CACHE_SIZE", 2048),
             max_head_requests=_int("WEB_MAX_HEAD_REQUESTS", 12),
+            max_proxy_mb=_int("WEB_MAX_PROXY_MB", 300),
+            max_concurrent_muxes=_int("WEB_MAX_CONCURRENT_MUXES", 1),
+            tmp_dir=os.environ.get("WEB_TMP_DIR", "/tmp/justthefile"),
             log_level=os.environ.get("LOG_LEVEL", "INFO").upper(),
         )

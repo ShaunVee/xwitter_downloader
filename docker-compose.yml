@@ -42,8 +42,18 @@ services:
       # than exposing this directly. Change to "8080:8080" to reach it from the
       # LAN while testing.
       - "127.0.0.1:8080:8080"
-    # No volumes: this process resolves links and returns JSON. It never
-    # downloads media, so it needs neither the cache nor scratch space.
+    environment:
+      WEB_TMP_DIR: /tmp/justthefile
+    volumes:
+      # Scratch for muxing Reddit audio onto video. Files live for the length of
+      # one request. X still never touches this: its media goes browser-direct.
+      #
+      # On a host with RAM to spare, a tmpfs keeps the churn off the disk:
+      #     - type: tmpfs
+      #       target: /tmp/justthefile
+      #       tmpfs:
+      #         size: 1g
+      - webscratch:/tmp/justthefile
     logging:
       driver: json-file
       options:
@@ -53,3 +63,4 @@ services:
 volumes:
   cache:
   scratch:
+  webscratch:

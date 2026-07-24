@@ -91,7 +91,7 @@ async function saveToDisk(url, filename, onProgress) {
   return received;
 }
 
-function renderCard(item) {
+function renderCard(item, payloadMeta) {
   const node = template.content.cloneNode(true);
   const card = node.querySelector(".card");
   const img = node.querySelector(".thumb:not(.placeholder)");
@@ -128,6 +128,38 @@ function renderCard(item) {
     button.innerHTML = `${variant.label}<span class="size">${humanSize(variant.size_bytes)}</span>`;
 
     button.addEventListener("click", async () => {
+      // Media the browser is not allowed to fetch goes through the server,
+      // which sets Content-Disposition itself. Navigating to it is enough, and
+      // avoids buffering a file we never needed to touch in JS.
+      if (item.delivery !== "direct") {
+        progress.hidden = false;
+        bar.classList.add("indeterminate");
+        progressLabel.textContent =
+          item.needs_mux
+            ? "Joining audio and video on the server\u2026"
+            : "Fetching through the server\u2026";
+
+        const href =
+          `/api/download?platform=${encodeURIComponent(payloadMeta.platform)}` +
+          `&post_id=${encodeURIComponent(payloadMeta.post_id)}` +
+          `&item=${item.index}&variant=${variant.index}`;
+        const anchor = document.createElement("a");
+        anchor.href = href;
+        anchor.download = "";
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+
+        // The browser owns the download from here; there is no progress event
+        // to listen to, so say so rather than leaving a bar spinning forever.
+        setTimeout(() => {
+          bar.classList.remove("indeterminate");
+          fill.style.width = "100%";
+          progressLabel.textContent = "Started. Check your downloads.";
+        }, 1500);
+        return;
+      }
+
       const buttons = qualities.querySelectorAll("button");
       buttons.forEach((b) => (b.disabled = true));
       progress.hidden = false;
@@ -185,7 +217,9 @@ async function resolve(url) {
 
     const heading = payload.author ? `From @${payload.author}` : "Ready";
     say(`${heading}: ${payload.media.length} item(s) found.`);
-    payload.media.forEach((item) => results.appendChild(renderCard(item)));
+    payload.media.forEach((item) =>
+      results.appendChild(renderCard(item, payload))
+    );
   } catch {
     say("Couldn't reach the server. Check your connection and try again.", "error");
   } finally {

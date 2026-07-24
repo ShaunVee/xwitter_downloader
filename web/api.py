@@ -6,11 +6,12 @@ never touches media, which is what keeps it cheap enough to run beside the bot
 on the same small VPS.
 
 Nothing here names a platform. Which links are accepted, and how they resolve,
-is entirely `web.platforms`.
+is entirely `core.platforms`.
 """
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -20,7 +21,9 @@ from fastapi import FastAPI, Query, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import platforms
+from core import platforms
+
+from . import download as download_mod
 from .cache import TTLCache
 from .config import WebConfig
 from .ratelimit import RateLimiter
@@ -49,6 +52,9 @@ def create_app(cfg: WebConfig | None = None) -> FastAPI:
     cfg = cfg or WebConfig.from_env()
     limiter = RateLimiter(cfg.rate_burst, cfg.rate_per_minute)
     cache = TTLCache(cfg.resolve_ttl_s, cfg.resolve_cache_size)
+    # Shared across requests so concurrent muxes queue rather than
+    # all landing on the one vCPU at once.
+    mux_gate = asyncio.Semaphore(max(1, cfg.max_concurrent_muxes))
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -116,7 +122,11 @@ def create_app(cfg: WebConfig | None = None) -> FastAPI:
                 status_code=404,
             )
 
-        payload = await describe(resolution, client, max_heads=cfg.max_head_requests)
+        payload = await describe(
+            resolution, client,
+            max_heads=cfg.max_head_requests, delivery=ref.delivery,
+            item_delivery=ref.item_delivery,
+        )
         if not payload["media"]:
             return JSONResponse(
                 {"error": "Nothing downloadable in that post."}, status_code=404
@@ -124,6 +134,64 @@ def create_app(cfg: WebConfig | None = None) -> FastAPI:
 
         cache.put(ref.cache_key, payload)
         return JSONResponse(payload, headers={"X-Cache": "miss"})
+
+    @app.get("/api/download")
+    async def download(
+        request: Request,
+        platform: str = Query(..., max_length=32),
+        post_id: str = Query(..., max_length=64),
+        item: int = Query(0, ge=0, le=64),
+        variant: int = Query(0, ge=0, le=32),
+    ):
+        """Server-side delivery for media the browser cannot fetch itself.
+
+        Takes indices rather than URLs on purpose: the URLs are re-derived from
+        our own resolution of the post, so this cannot be pointed at an
+        arbitrary host. See `web.download`.
+        """
+        ip = _client_ip(request, cfg.trust_proxy)
+        if not limiter.allow(ip):
+            return JSONResponse(
+                {"error": "Too many requests, give it a moment."},
+                status_code=429,
+                headers={"Retry-After": str(limiter.retry_after(ip))},
+            )
+
+        handler = download_mod.platform_named(platform)
+        if handler is None:
+            return JSONResponse({"error": "Unknown platform."}, status_code=400)
+
+        client: httpx.AsyncClient = request.app.state.client
+        key = f"{platform}:{post_id}"
+
+        # The resolve call almost always ran moments ago, so this is a cache hit
+        # and the download costs no extra upstream request.
+        payload = cache.get(key)
+        if payload is None:
+            ref = platforms.PostRef(platform=platform, post_id=post_id, handler=handler)
+            try:
+                resolution = await ref.fetch(client)
+            except Exception:
+                log.exception("download resolve failed for %s", key)
+                return JSONResponse(
+                    {"error": "Couldn't reach that site just now."}, status_code=502
+                )
+            if not resolution.items:
+                return JSONResponse({"error": "Nothing to download."}, status_code=404)
+
+            payload = await describe(
+                resolution, client,
+                max_heads=cfg.max_head_requests, delivery=ref.delivery,
+                item_delivery=ref.item_delivery,
+            )
+            cache.put(key, payload)
+
+        return await download_mod.deliver(
+            payload, handler, item, variant, client,
+            cap=cfg.max_proxy_mb * download_mod.MB,
+            tmp_root=Path(cfg.tmp_dir),
+            gate=mux_gate,
+        )
 
     @app.get("/api/platforms")
     async def supported() -> dict[str, object]:

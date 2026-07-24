@@ -20,6 +20,7 @@ RUN pip install -r requirements.txt
 
 # One image, two entrypoints: the bot and the web front end share the whole
 # extraction pipeline, so building them separately would only duplicate it.
+COPY core/ ./core/
 COPY bot/ ./bot/
 COPY web/ ./web/
 

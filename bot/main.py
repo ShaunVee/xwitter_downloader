@@ -28,12 +28,15 @@ from telegram.ext import (
     filters,
 )
 
-from . import profile, providers, select, transcode, urls
+from core import select
+from core.platforms.x import providers, urls
+
+from . import profile, transcode
 from .access import is_allowed
 from .cache import FileIdCache
 from .config import Config
 from .jobs import Job, JobQueue, Limits, QueueFull
-from .models import GIF, PHOTO, VIDEO, MediaItem
+from core.models import GIF, PHOTO, VIDEO, MediaItem
 from .profile import HELP
 
 log = logging.getLogger(__name__)

@@ -18,10 +18,9 @@ from typing import Any, Optional
 
 import httpx
 
-from bot.models import PHOTO, MediaItem, Variant
-from bot.select import head_size
-
-from .platforms.base import Resolution
+from core.models import PHOTO, MediaItem, Variant
+from core.platforms.base import DIRECT, Resolution
+from core.select import head_size
 
 # X encodes the rendition in the path: /vid/1280x720/ and /vid/avc1/720x1280/.
 _RESOLUTION_RE = re.compile(r"/(\d{2,5})x(\d{2,5})/")
@@ -97,13 +96,27 @@ async def _sized_variants(
             "content_type": variant.content_type,
         }
 
-    return list(await asyncio.gather(*(describe(v) for v in ladder)))
+    rungs = list(await asyncio.gather(*(describe(v) for v in ladder)))
+    for position, rung in enumerate(rungs):
+        rung["index"] = position
+    return rungs
 
 
 async def describe(
-    post: Resolution, client: httpx.AsyncClient, *, max_heads: int
+    post: Resolution,
+    client: httpx.AsyncClient,
+    *,
+    max_heads: int,
+    delivery: str = DIRECT,
+    item_delivery=lambda item: DIRECT,
 ) -> dict[str, Any]:
-    """Full API payload for a resolved post."""
+    """Full API payload for a resolved post.
+
+    `delivery` tells the front end whether it may fetch the media itself or has
+    to come back through us. Today every platform is DIRECT, so the browser
+    ignores it, but it is in the payload from the start so adding a proxied
+    platform is a server change rather than a protocol change.
+    """
     budget = asyncio.Semaphore(max(1, max_heads))
     stem = _stem(post)
     multiple = len(post.items) > 1
@@ -120,6 +133,12 @@ async def describe(
             "height": item.height,
             "thumbnail": item.thumbnail,
             "filename": f"{stem}{suffix}.{ext}",
+            # Per item, not per platform: a Reddit clip with no audio track is
+            # already a complete file and can be fetched direct, while the one
+            # beside it in the same post may need muxing.
+            "delivery": item_delivery(item),
+            "needs_mux": item.needs_mux,
+            "audio_url": item.audio_url,
             "variants": variants,
         }
 
@@ -130,6 +149,7 @@ async def describe(
     return {
         "platform": post.platform,
         "post_id": post.post_id,
+        "delivery": delivery,
         "author": post.author,
         "text": post.text,
         "source": post.source,

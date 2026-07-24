@@ -46,6 +46,16 @@ class MediaItem:
     # UI shows it as a preview before the user commits to a download.
     thumbnail: Optional[str] = None
 
+    # Set when the platform serves audio as a separate file, which DASH sources
+    # like Reddit do. The variants above are then silent video, and something
+    # has to mux the two before a user gets a file worth having. X never sets
+    # this, so nothing on that path changes.
+    audio_url: Optional[str] = None
+
+    @property
+    def needs_mux(self) -> bool:
+        return self.audio_url is not None
+
     @property
     def mp4_variants_best_first(self) -> list[Variant]:
         """mp4 renditions, highest bitrate first. Excludes HLS playlists."""

@@ -17,12 +17,12 @@ from typing import Optional
 
 import httpx
 
-from . import x
-from .base import Resolution
+from . import reddit, x
+from .base import DIRECT, Resolution
 
 log = logging.getLogger(__name__)
 
-REGISTRY: tuple[ModuleType, ...] = (x,)
+REGISTRY: tuple[ModuleType, ...] = (x, reddit)
 
 __all__ = ["REGISTRY", "PostRef", "Resolution", "identify", "supported"]
 
@@ -34,6 +34,25 @@ class PostRef:
     platform: str
     post_id: str
     handler: ModuleType
+
+    @property
+    def delivery(self) -> str:
+        """How this platform's bytes can reach the user. See `base`."""
+        return getattr(self.handler, "DELIVERY", DIRECT)
+
+    @property
+    def item_delivery(self):
+        """Per-item delivery, for platforms where it varies.
+
+        Reddit is the reason this exists: a clip with an audio track has to be
+        muxed server-side, while a silent one in the same post can be fetched
+        straight from the CDN. Platforms that don't care inherit the flat mode.
+        """
+        resolver = getattr(self.handler, "delivery_for", None)
+        if resolver is not None:
+            return resolver
+        mode = self.delivery
+        return lambda item: mode
 
     @property
     def cache_key(self) -> str:
@@ -68,7 +87,13 @@ async def identify(url: str, client: httpx.AsyncClient) -> Optional[PostRef]:
 def supported() -> list[dict[str, object]]:
     """What the front end tells visitors it accepts."""
     return [
-        {"name": h.NAME, "label": h.LABEL, "hosts": list(h.HOSTS)} for h in REGISTRY
+        {
+            "name": h.NAME,
+            "label": h.LABEL,
+            "hosts": list(h.HOSTS),
+            "delivery": getattr(h, "DELIVERY", DIRECT),
+        }
+        for h in REGISTRY
     ]
 
 

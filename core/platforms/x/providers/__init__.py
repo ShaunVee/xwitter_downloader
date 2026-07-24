@@ -11,7 +11,7 @@ import logging
 
 import httpx
 
-from ..models import TweetMedia
+from core.models import TweetMedia
 from . import fxtwitter, syndication
 
 log = logging.getLogger(__name__)

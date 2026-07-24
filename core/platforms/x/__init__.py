@@ -1,22 +1,30 @@
 """X (Twitter).
 
-A thin adapter, not an implementation: the extraction lives in `bot/` and is
-shared verbatim with the Telegram bot. All this does is present it through the
-platform contract, so X stops being the thing the web layer is built around and
-becomes the first entry in a list.
+The extraction itself lives in `providers/` and `urls.py` beside this file.
+This module is the platform contract over the top of them, and is the only
+thing the registry or a bot needs to import.
 """
 
 from __future__ import annotations
 
 import httpx
 
-from bot import providers, urls
-
-from .base import Resolution
+from ..base import DIRECT, Resolution
+from . import providers, urls
 
 NAME = "x"
 LABEL = "X (Twitter)"
 HOSTS = ("x.com", "twitter.com", "t.co")
+
+# Hosts the download endpoint may fetch from. A safety net: every URL it
+# handles already came from our own extraction, never from the caller.
+MEDIA_HOSTS = ("video.twimg.com", "pbs.twimg.com")
+
+# Measured, not assumed: video.twimg.com reflects arbitrary origins in
+# Access-Control-Allow-Origin, so the browser fetches the file itself and this
+# stays the one platform that costs us no bandwidth. It does hotlink-protect on
+# Referer, which the front end handles with referrerPolicy: "no-referrer".
+DELIVERY = DIRECT
 
 
 async def identify(url: str, client: httpx.AsyncClient) -> str | None:
