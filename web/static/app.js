@@ -15,6 +15,9 @@ const submit = document.getElementById("submit");
 const message = document.getElementById("message");
 const results = document.getElementById("results");
 const template = document.getElementById("media-card");
+const batch = document.getElementById("batch");
+const downloadAllButton = document.getElementById("download-all");
+const batchStatus = document.getElementById("batch-status");
 
 const KIND_LABELS = { video: "Video", gif: "GIF", photo: "Photo" };
 
@@ -62,7 +65,23 @@ function nameFor(filename, label, multipleRungs) {
   return `${filename.slice(0, dot)}-${label}${filename.slice(dot)}`;
 }
 
-async function saveToDisk(url, filename, onProgress) {
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/* Above this, a proxied file is handed to the browser as a navigation instead
+   of being read here: the blob route holds the whole file in memory, which is
+   a fine trade for a gallery image and a bad one for a long video. */
+const STREAM_CAP_BYTES = 64 * 1024 * 1024;
+
+/* Whether a proxied file is worth reading in JS rather than navigating to.
+   Doing so buys a real progress bar, a real error when the server says no
+   (a navigation would quietly save the error page as if it were the file),
+   and, for "download all", knowing when one file has finished. */
+function streamable(item, variant) {
+  if (item.needs_mux) return false;
+  return Boolean(variant.size_bytes) && variant.size_bytes <= STREAM_CAP_BYTES;
+}
+
+async function saveToDisk(url, filename, onProgress, source = "the source CDN") {
   const response = await fetch(url, {
     mode: "cors",
     credentials: "omit",
@@ -74,7 +93,11 @@ async function saveToDisk(url, filename, onProgress) {
     referrerPolicy: "no-referrer",
   });
   if (!response.ok) {
-    throw new Error(`the source CDN returned ${response.status}`);
+    throw new Error(
+      response.status === 429
+        ? "too many requests at once, wait a few seconds"
+        : `${source} returned ${response.status}`
+    );
   }
 
   // content-length is CORS-safelisted, so it is readable without the CDN
@@ -136,6 +159,89 @@ function renderCard(item, payloadMeta) {
 
   const multipleRungs = item.variants.length > 1;
 
+  /* One rung, saved. Drives this card's own progress row either way it goes,
+     and resolves to whether the file made it, so "download all" can count the
+     ones that didn't. Never rejects: a failure in one file of nine is not a
+     reason to abandon the other eight. */
+  async function run(variant) {
+    const buttons = qualities.querySelectorAll("button");
+    buttons.forEach((b) => (b.disabled = true));
+    progress.hidden = false;
+    bar.classList.add("indeterminate");
+    fill.style.width = "";
+    progressLabel.classList.remove("done");
+
+    const proxied = item.delivery !== "direct";
+    // Media the browser is not allowed to fetch comes back through the server
+    // instead, addressed by index rather than by URL.
+    const href = proxied
+      ? `/api/download?platform=${encodeURIComponent(payloadMeta.platform)}` +
+        `&post_id=${encodeURIComponent(payloadMeta.post_id)}` +
+        `&item=${item.index}&variant=${variant.index}`
+      : variant.url;
+
+    try {
+      // A mux has no size until ffmpeg has run, so there is nothing to show
+      // progress against and no reason to hold the result in memory: a plain
+      // navigation hands the lot to the browser, and the server's
+      // Content-Disposition names the file.
+      if (proxied && !streamable(item, variant)) {
+        progressLabel.textContent =
+          item.needs_mux
+            ? "Joining audio and video on the server\u2026"
+            : "Fetching through the server\u2026";
+
+        const anchor = document.createElement("a");
+        anchor.href = href;
+        anchor.download = "";
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+
+        // The browser owns the download from here; there is no progress event
+        // to listen to, so say so rather than leaving a bar spinning forever.
+        await sleep(1500);
+        bar.classList.remove("indeterminate");
+        fill.style.width = "100%";
+        progressLabel.textContent = "Started. Check your downloads.";
+        progressLabel.classList.add("done");
+        return true;
+      }
+
+      progressLabel.textContent = proxied
+        ? "Fetching through the server…"
+        : "Starting…";
+      const saved = await saveToDisk(
+        href,
+        nameFor(item.filename, variant.label, multipleRungs),
+        (received, total) => {
+          if (total) {
+            bar.classList.remove("indeterminate");
+            fill.style.width = `${Math.round((received / total) * 100)}%`;
+            progressLabel.textContent =
+              `${humanSize(received)} of ${humanSize(total)}`;
+          } else {
+            progressLabel.textContent = `${humanSize(received)} downloaded`;
+          }
+        },
+        proxied ? "the server" : "the source CDN"
+      );
+      bar.classList.remove("indeterminate");
+      fill.style.width = "100%";
+      progressLabel.textContent = `Saved · ${humanSize(saved)}`;
+      progressLabel.classList.add("done");
+      return true;
+    } catch (error) {
+      bar.classList.remove("indeterminate");
+      fill.style.width = "0";
+      progressLabel.textContent =
+        `Download failed: ${error.message}. The link may have expired; try resolving the post again.`;
+      return false;
+    } finally {
+      buttons.forEach((b) => (b.disabled = false));
+    }
+  }
+
   item.variants.forEach((variant) => {
     const button = document.createElement("button");
     button.type = "button";
@@ -151,86 +257,52 @@ function renderCard(item, payloadMeta) {
       button.appendChild(tag);
     }
 
-    button.addEventListener("click", async () => {
-      // Media the browser is not allowed to fetch goes through the server,
-      // which sets Content-Disposition itself. Navigating to it is enough, and
-      // avoids buffering a file we never needed to touch in JS.
-      if (item.delivery !== "direct") {
-        progress.hidden = false;
-        bar.classList.add("indeterminate");
-        progressLabel.textContent =
-          item.needs_mux
-            ? "Joining audio and video on the server\u2026"
-            : "Fetching through the server\u2026";
-
-        const href =
-          `/api/download?platform=${encodeURIComponent(payloadMeta.platform)}` +
-          `&post_id=${encodeURIComponent(payloadMeta.post_id)}` +
-          `&item=${item.index}&variant=${variant.index}`;
-        const anchor = document.createElement("a");
-        anchor.href = href;
-        anchor.download = "";
-        document.body.appendChild(anchor);
-        anchor.click();
-        anchor.remove();
-
-        // The browser owns the download from here; there is no progress event
-        // to listen to, so say so rather than leaving a bar spinning forever.
-        setTimeout(() => {
-          bar.classList.remove("indeterminate");
-          fill.style.width = "100%";
-          progressLabel.textContent = "Started. Check your downloads.";
-          progressLabel.classList.add("done");
-        }, 1500);
-        return;
-      }
-
-      const buttons = qualities.querySelectorAll("button");
-      buttons.forEach((b) => (b.disabled = true));
-      progress.hidden = false;
-      bar.classList.add("indeterminate");
-      fill.style.width = "";
-      progressLabel.classList.remove("done");
-      progressLabel.textContent = "Starting…";
-
-      try {
-        const saved = await saveToDisk(
-          variant.url,
-          nameFor(item.filename, variant.label, multipleRungs),
-          (received, total) => {
-            if (total) {
-              bar.classList.remove("indeterminate");
-              fill.style.width = `${Math.round((received / total) * 100)}%`;
-              progressLabel.textContent =
-                `${humanSize(received)} of ${humanSize(total)}`;
-            } else {
-              progressLabel.textContent = `${humanSize(received)} downloaded`;
-            }
-          }
-        );
-        bar.classList.remove("indeterminate");
-        fill.style.width = "100%";
-        progressLabel.textContent = `Saved · ${humanSize(saved)}`;
-        progressLabel.classList.add("done");
-      } catch (error) {
-        bar.classList.remove("indeterminate");
-        fill.style.width = "0";
-        progressLabel.textContent =
-          `Download failed: ${error.message}. The link may have expired; try resolving the post again.`;
-      } finally {
-        buttons.forEach((b) => (b.disabled = false));
-      }
-    });
-
+    button.addEventListener("click", () => run(variant));
     qualities.appendChild(button);
   });
 
-  return card;
+  // The ladder arrives best first, so index 0 is what "download all" takes:
+  // choosing a quality per file is the work that button exists to skip.
+  return { card, download: () => run(item.variants[0]) };
+}
+
+/* Sequential, not parallel. Nine concurrent fetches compete for the one pipe,
+   and the proxied ones would land nine muxes on the one vCPU at once. Going in
+   order also gives the run an honest "3 of 9" to report. */
+async function downloadAll(cards) {
+  downloadAllButton.disabled = true;
+  batchStatus.classList.remove("done");
+  let saved = 0;
+
+  for (const [position, card] of cards.entries()) {
+    batchStatus.textContent = `Downloading ${position + 1} of ${cards.length}…`;
+    let ok = await card.download();
+    if (!ok) {
+      // One retry, unhurried. What fails here is usually the rate limiter or a
+      // dropped connection, and both clear on their own within a second or two.
+      batchStatus.textContent =
+        `Retrying ${position + 1} of ${cards.length}…`;
+      await sleep(2500);
+      ok = await card.download();
+    }
+    if (ok) saved += 1;
+    // Browsers throttle saves that arrive back to back; a gap between them
+    // keeps the later files from being dropped silently.
+    if (position < cards.length - 1) await sleep(400);
+  }
+
+  const failed = cards.length - saved;
+  batchStatus.textContent = failed
+    ? `${saved} of ${cards.length} saved. Retry the rest from the cards below.`
+    : `All ${cards.length} files done. Check your downloads.`;
+  batchStatus.classList.toggle("done", failed === 0);
+  downloadAllButton.disabled = false;
 }
 
 async function resolve(url) {
   submit.disabled = true;
   results.replaceChildren();
+  batch.hidden = true;
   say("Looking up that post…", "busy");
 
   try {
@@ -245,9 +317,20 @@ async function resolve(url) {
     const heading = payload.author ? `From @${payload.author}` : "Ready";
     const count = payload.media.length;
     say(`${heading}: ${count} ${count === 1 ? "file" : "files"} ready.`);
-    payload.media.forEach((item) =>
-      results.appendChild(renderCard(item, payload))
-    );
+
+    const cards = payload.media.map((item) => renderCard(item, payload));
+    results.replaceChildren(...cards.map((entry) => entry.card));
+
+    // One file needs no batch button: the card already is one.
+    if (cards.length > 1) {
+      batch.hidden = false;
+      downloadAllButton.querySelector(".label").textContent =
+        `Download all ${cards.length}`;
+      batchStatus.classList.remove("done");
+      batchStatus.textContent = "Best quality of each, one after another.";
+      downloadAllButton.disabled = false;
+      downloadAllButton.onclick = () => downloadAll(cards);
+    }
   } catch {
     say("Couldn't reach the server. Check your connection and try again.", "error");
   } finally {

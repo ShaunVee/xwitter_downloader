@@ -33,6 +33,13 @@ class WebConfig:
     rate_burst: int = 10
     rate_per_minute: int = 30
 
+    # Downloads get their own, looser bucket. One paste of a nine-image gallery
+    # is one resolve and nine downloads, and the limit above would refuse half
+    # of them; the downloads are also the cheap half, since they read the post
+    # out of the cache the resolve just filled and touch nothing upstream.
+    download_burst: int = 40
+    download_per_minute: int = 90
+
     # Resolved tweets are cached in-process. A link doing the rounds otherwise
     # means every visitor's lookup hits X from this one server IP.
     resolve_ttl_s: int = 900
@@ -63,6 +70,8 @@ class WebConfig:
             in {"1", "true", "yes"},
             rate_burst=_int("WEB_RATE_BURST", 10),
             rate_per_minute=_int("WEB_RATE_PER_MINUTE", 30),
+            download_burst=_int("WEB_DOWNLOAD_BURST", 40),
+            download_per_minute=_int("WEB_DOWNLOAD_PER_MINUTE", 90),
             resolve_ttl_s=_int("WEB_RESOLVE_TTL_S", 900),
             resolve_cache_size=_int("WEB_RESOLVE_CACHE_SIZE", 2048),
             max_head_requests=_int("WEB_MAX_HEAD_REQUESTS", 12),

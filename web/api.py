@@ -61,6 +61,10 @@ def _client_ip(request: Request, trust_proxy: bool) -> str:
 def create_app(cfg: WebConfig | None = None) -> FastAPI:
     cfg = cfg or WebConfig.from_env()
     limiter = RateLimiter(cfg.rate_burst, cfg.rate_per_minute)
+    # Separate bucket for downloads: "download all" on a gallery is one resolve
+    # and one request per file, and charging those to the resolve bucket would
+    # 429 the back half of the run.
+    download_limiter = RateLimiter(cfg.download_burst, cfg.download_per_minute)
     cache = TTLCache(cfg.resolve_ttl_s, cfg.resolve_cache_size)
     # Shared across requests so concurrent muxes queue rather than
     # all landing on the one vCPU at once.
@@ -183,11 +187,11 @@ def create_app(cfg: WebConfig | None = None) -> FastAPI:
         arbitrary host. See `web.download`.
         """
         ip = _client_ip(request, cfg.trust_proxy)
-        if not limiter.allow(ip):
+        if not download_limiter.allow(ip):
             return JSONResponse(
                 {"error": "Too many requests, give it a moment."},
                 status_code=429,
-                headers={"Retry-After": str(limiter.retry_after(ip))},
+                headers={"Retry-After": str(download_limiter.retry_after(ip))},
             )
 
         handler = download_mod.platform_named(platform)

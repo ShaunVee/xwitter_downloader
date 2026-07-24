@@ -267,6 +267,37 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
 .message.error { border-left-color: var(--danger); }
 .message.busy { border-left-color: var(--accent); }
 
+/* ---- download all ---- */
+
+/* Sits between the message and the cards, so on a nine-image gallery the one
+   button you want is the first thing under "9 files ready". */
+.batch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.9rem;
+  margin-top: 1.25rem;
+  padding: 0.85rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+#download-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.6rem 1rem;
+  color: var(--accent-ink);
+  background: var(--accent);
+}
+
+#download-all:hover:not(:disabled) { background: var(--accent-hover); }
+
+.batch-note { margin: 0; font-size: 0.85rem; color: var(--muted); }
+.batch-note.done { color: var(--ok); }
+
 /* ---- results ---- */
 
 .results { margin-top: 1.25rem; display: grid; gap: 1rem; }

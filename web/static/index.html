@@ -114,6 +114,16 @@
 
   <p id="message" class="message" role="status" aria-live="polite" hidden></p>
 
+  <!-- Only shown for posts with more than one file: a gallery of nine is nine
+       clicks otherwise. app.js unhides it and fills in the count. -->
+  <div id="batch" class="batch" hidden>
+    <button type="button" id="download-all">
+      <svg class="icon" aria-hidden="true"><use href="#i-download"></use></svg>
+      <span class="label">Download all</span>
+    </button>
+    <p class="batch-note" id="batch-status" role="status" aria-live="polite"></p>
+  </div>
+
   <section id="results" class="results" aria-live="polite"></section>
 
   <ul class="assurances">
