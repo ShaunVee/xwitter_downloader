@@ -5,7 +5,7 @@
 <h1 align="center">justthefile</h1>
 
 <p align="center">
-  <strong>Paste an X (Twitter) link into a web page, or send it to a Telegram bot.<br>Get the video back as a real mp4.</strong>
+  <strong>Paste an X or Reddit link into a web page, or send one to a Telegram bot.<br>Get the video back as a real mp4.</strong>
 </p>
 
 <p align="center">
@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  No X API key. No developer account. No cookies. No login.
+  No API keys. No developer account. No cookies. No login.
 </p>
 
 <p align="center">
@@ -28,7 +28,9 @@
 <p align="center">
   <a href="https://justthefile.com"><strong>➜ justthefile.com</strong></a>
   &nbsp;·&nbsp;
-  <a href="https://t.me/xwitter_downloader_bot"><strong>@xwitter_downloader_bot on Telegram</strong></a>
+  <a href="https://t.me/xwitter_downloader_bot"><strong>@xwitter_downloader_bot</strong></a>
+  &nbsp;·&nbsp;
+  <a href="https://t.me/rddt_downloader_bot"><strong>@rddt_downloader_bot</strong></a>
 </p>
 
 ---
@@ -36,11 +38,15 @@
 ## Use it
 
 **On the web**: open **[justthefile.com](https://justthefile.com)**, paste a link
-to an X post, pick a quality. The file downloads straight from X's servers to your
-browser. No 50 MB ceiling, and you get the original.
+to an X or Reddit post, pick a quality. No 50 MB ceiling, and you get the
+original. X files download straight from X's servers to your browser, so they
+never touch this box at all.
 
-**On Telegram**: open **[@xwitter_downloader_bot](https://t.me/xwitter_downloader_bot)**,
-hit **Start**, paste a link, get the video back as an mp4.
+**On Telegram**: one bot per platform, each with its own name and photo.
+**[@xwitter_downloader_bot](https://t.me/xwitter_downloader_bot)** for X,
+**[@rddt_downloader_bot](https://t.me/rddt_downloader_bot)** for Reddit. Hit
+**Start**, paste a link, get the video back as an mp4 — with its audio track
+joined back on, in Reddit's case.
 
 Either way: nothing to install, no account to make.
 
@@ -52,7 +58,8 @@ Either way: nothing to install, no account to make.
 |---|---|
 | 🎬 | **Real mp4 files**, playable inline and saveable, not a link to a mirror site |
 | 🖼️ | **Multi-video posts**, GIFs as looping animations, photos at original resolution |
-| 🔗 | **`t.co` short links** resolved automatically |
+| 🔗 | **Short links** resolved automatically: `t.co`, `redd.it`, and Reddit's `/s/` share links |
+| 🔊 | **Reddit video arrives with sound**, which DASH splits into a separate file and most tools drop |
 | 📏 | **Smart size-fitting**: picks the best quality that fits Telegram's upload cap |
 | ⚡ | **Instant repeats**: previously sent videos return from cache with zero re-download |
 | 🎞️ | **Oversized videos still arrive**: compressed to fit, or as a direct link if compressing would ruin them |
@@ -60,24 +67,59 @@ Either way: nothing to install, no account to make.
 
 ---
 
+## Supported platforms
+
+| Platform | Links accepted | Web | Telegram bot |
+|---|---|---|---|
+| **X (Twitter)** | `x.com`, `twitter.com`, `t.co` | ✅ | ✅ `PLATFORM=x` |
+| **Reddit** | `reddit.com`, `redd.it`, `/s/` share links | ✅ | ✅ `PLATFORM=reddit` |
+
+Both surfaces resolve through the same platform registry in `core/platforms/`,
+and neither names a platform in its own code. **The site is the aggregator**: one
+page, every platform, chosen by whatever link you paste. **The bots are
+standalones**: one bot per platform, each with its own token, name, photo and
+cache, so a Reddit user is never handed X's copy or X's error messages.
+
+They're the same process started twice. `PLATFORM` picks the handler out of the
+registry and the copy out of `bot/profile.py`; everything between (queue,
+size-fitting, transcode, `file_id` cache) is platform-blind and exists once.
+
+Adding a platform is a new module in `core/platforms/` plus one entry in
+`REGISTRY`. Nothing above that line names a platform: not the API, not the cache,
+not the front end, which asks `/api/platforms` what it supports rather than
+hardcoding a list. Giving it a bot too is a `Profile` in `bot/profile.py` and a
+service block in `docker-compose.yml`.
+
+---
+
 ## How it works
+
+The pipeline below is the **Telegram bot's**. The site shares the extraction
+half and diverges at delivery — see [The web front end](#the-web-front-end).
+
+Only the two shaded steps differ by platform: which provider pair is asked, and
+whether audio arrives as a second file that has to be joined on. The rest of the
+pipeline never learns where the bytes came from.
 
 ```mermaid
 flowchart LR
-    A[X post link] --> B[Parse tweet ID]
-    B --> C[syndication API]
-    C -.miss.-> D[fxtwitter API]
+    A[Post link] --> B[Identify: which platform, which post]
+    B --> C[Provider chain for that platform]
+    C -.miss.-> D[Fallback provider]
     C --> E[Variant ladder]
     D --> E
-    E --> F{Fits the cap?}
-    F -- yes --> G[Stream download]
-    F -- no --> H[ffmpeg fit-to-size]
-    G --> I[Send to Telegram]
-    H --> I
-    I --> J[(Cache file_id)]
+    E --> F{Separate audio?}
+    F -- yes --> M[ffmpeg mux]
+    F -- no --> G{Fits the cap?}
+    M --> G
+    G -- yes --> H[Stream download]
+    G -- no --> I[ffmpeg fit-to-size]
+    H --> J[Send to Telegram]
+    I --> J
+    J --> K[(Cache file_id)]
 ```
 
-### Two extraction paths, because neither is enough alone
+### X: two extraction paths, because neither is enough alone
 
 **`cdn.syndication.twimg.com/tweet-result`** is the endpoint behind embedded tweets.
 It returns the **full variant ladder** (every mp4 bitrate X encoded), which is what
@@ -92,6 +134,31 @@ way loses the ladder.
 `video.twimg.com` then serves the file with **no auth, no cookies and no Referer**,
 and supports `HEAD` and range requests, which is what lets the bot check a file's
 size before committing to the download.
+
+### Reddit: the same split, for a different reason
+
+Reddit lands on a two-provider pair as well, and the reliable source is the
+scrape rather than the API.
+
+**`old.reddit.com`** is the primary. The page is server-rendered and every field
+worth having sits in `data-` attributes on the post's own div, so this is
+attribute lookup rather than real HTML parsing. Those attributes have been stable
+for the decade old.reddit has existed.
+
+**Reddit's own post JSON** is the fallback, and it is cleaner data that cannot be
+trusted first: across testing it returned `403` in bursts from a single IP with
+no warning and no `Retry-After`, then recovered. For a site serving many visitors
+from one VPS address that means failures that look random. The reliable source is
+the HTML; the rich source is the JSON.
+
+The variant ladder comes from neither. `v.redd.it` publishes a
+**`DASHPlaylist.mpd`** next to every video listing each rendition it encoded,
+needs no auth, and hasn't rate-limited in any testing: the post page says *which*
+video, the manifest says what qualities exist.
+
+The catch, and the reason Reddit can't be delivered the way X is: **audio lives
+in its own AdaptationSet and its own file**. A video Representation on its own is
+silent, which is why so many downloaders hand back mute clips.
 
 ### The real constraint is Telegram, not X
 
@@ -156,8 +223,8 @@ from our own resolution of the post, and checked against the platform's declared
 box an open proxy, which is worth more to an attacker than anything else here.
 
 ```bash
-docker compose up -d          # bot + web
-docker compose up -d bot      # bot only
+docker compose up -d               # both bots + web
+docker compose up -d bot-reddit    # one bot only
 curl localhost:8080/api/health
 ```
 
@@ -188,8 +255,9 @@ browser's default would attach one and break every download.
 
 ## Notes
 
-This relies on undocumented endpoints that can change without warning, hence the
-two-provider fallback.
+This relies on undocumented endpoints that can change without warning, which is
+why every platform here resolves through two independent providers rather than
+one.
 
 Downloaded video remains subject to whatever rights the original poster holds.
 Intended for personal archiving of content you're entitled to keep.

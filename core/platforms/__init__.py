@@ -92,6 +92,9 @@ def supported() -> list[dict[str, object]]:
             "label": h.LABEL,
             "hosts": list(h.HOSTS),
             "delivery": getattr(h, "DELIVERY", DIRECT),
+            # None until that platform has a bot of its own. The page renders
+            # the difference rather than hiding it.
+            "telegram_bot": getattr(h, "TELEGRAM_BOT", None),
         }
         for h in REGISTRY
     ]

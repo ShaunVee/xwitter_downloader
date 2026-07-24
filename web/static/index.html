@@ -12,6 +12,8 @@
 <link rel="canonical" href="https://justthefile.com/">
 <link rel="icon" href="/logo.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/logo.png">
+<meta name="theme-color" content="#0b1016" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f5f8fb" media="(prefers-color-scheme: light)">
 <link rel="stylesheet" href="/styles.css">
 
 <meta property="og:type" content="website">
@@ -28,15 +30,60 @@
 </head>
 <body>
 
+<!-- Icon sprite. Inline rather than a file: it is small, it renders before
+     first paint, and it inherits currentColor so one glyph serves the light
+     scheme, the dark scheme and the hover state. -->
+<svg class="sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="i-x" viewBox="0 0 24 24">
+    <path fill="currentColor" d="M17.53 3h3.02l-6.6 7.54L21.75 21h-5.9l-4.63-6.05L5.92 21H2.9l7.06-8.07L2.25 3h6.05l4.19 5.54L17.53 3Zm-1.06 16.2h1.67L7.6 4.72H5.81l10.66 14.48Z"/>
+  </symbol>
+  <symbol id="i-reddit" viewBox="0 0 24 24">
+    <path fill="currentColor" d="M22 11.82a2.34 2.34 0 0 0-3.96-1.66 11.4 11.4 0 0 0-5.83-1.83l.99-4.66 3.25.69a1.67 1.67 0 1 0 .2-1.02l-3.77-.8a.5.5 0 0 0-.59.38l-1.15 5.4a11.4 11.4 0 0 0-5.9 1.83A2.34 2.34 0 1 0 2.9 14.4a4.4 4.4 0 0 0-.05.7c0 3.55 4.1 6.43 9.16 6.43s9.16-2.88 9.16-6.43a4.4 4.4 0 0 0-.05-.7A2.34 2.34 0 0 0 22 11.82ZM7.66 13.5a1.67 1.67 0 1 1 3.34 0 1.67 1.67 0 0 1-3.34 0Zm9.03 4.36c-1.15 1.15-3.34 1.24-3.98 1.24s-2.84-.09-3.98-1.24a.44.44 0 0 1 .62-.62c.72.72 2.27.98 3.36.98s2.64-.26 3.36-.98a.44.44 0 0 1 .62.62Zm-.35-2.69a1.67 1.67 0 1 1 0-3.35 1.67 1.67 0 0 1 0 3.35Z"/>
+  </symbol>
+  <symbol id="i-telegram" viewBox="0 0 24 24">
+    <path fill="currentColor" d="M21.7 4.28 18.5 19.4c-.24 1.07-.88 1.33-1.78.83l-4.92-3.62-2.37 2.28c-.26.26-.48.48-.99.48l.35-5 9.1-8.22c.4-.35-.08-.55-.61-.2L5.03 13.03.2 11.52c-1.05-.33-1.07-1.05.22-1.56L20.34 2.3c.87-.33 1.64.2 1.36 1.98Z"/>
+  </symbol>
+  <symbol id="i-link" viewBox="0 0 24 24">
+    <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M10 13.5a3.5 3.5 0 0 0 5 0l3-3a3.54 3.54 0 0 0-5-5l-1.5 1.5M14 10.5a3.5 3.5 0 0 0-5 0l-3 3a3.54 3.54 0 0 0 5 5l1.5-1.5"/>
+  </symbol>
+  <symbol id="i-download" viewBox="0 0 24 24">
+    <path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M12 3.5v10m0 0 4-4m-4 4-4-4M4 16v2.5A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5V16"/>
+  </symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24">
+    <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M12 3 5 5.8v5.4c0 4 2.9 7.7 7 9.8 4.1-2.1 7-5.8 7-9.8V5.8L12 3Zm-2.6 8.9 1.9 1.9 3.4-3.6"/>
+  </symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24">
+    <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M13.2 2.5 4.8 13.2h6L10 21.5l8.4-10.7h-6l.8-8.3Z"/>
+  </symbol>
+  <symbol id="i-eye-off" viewBox="0 0 24 24">
+    <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M4 4l16 16M9.9 5.2a8.7 8.7 0 0 1 2.1-.25c4.5 0 8 3.6 9 7.05a11.6 11.6 0 0 1-2.6 4.2M6.5 7.1A11.4 11.4 0 0 0 3 12c1 3.45 4.5 7.05 9 7.05a8.6 8.6 0 0 0 3.4-.7M10.1 10.2a2.6 2.6 0 0 0 3.6 3.6"/>
+  </symbol>
+  <symbol id="i-play" viewBox="0 0 24 24">
+    <path fill="currentColor" d="M8.5 5.6a1 1 0 0 1 1.53-.85l8.1 5.15a1.2 1.2 0 0 1 0 2.02l-8.1 5.15a1 1 0 0 1-1.53-.85V5.6Z"/>
+  </symbol>
+</svg>
+
+<div class="glow" aria-hidden="true"></div>
+
 <main>
   <header class="masthead">
-    <img src="/logo.svg" alt="" width="56" height="56" class="logo">
-    <h1 class="wordmark">just<span>the</span>file</h1>
-    <p class="tagline">Paste a link. Get the video as a real mp4, with no mirror page and no ads.</p>
+    <a class="brand" href="/" aria-label="justthefile home">
+      <img src="/logo.svg" alt="" width="40" height="40" class="logo">
+      <span class="wordmark">just<span>the</span>file</span>
+    </a>
   </header>
+
+  <section class="hero">
+    <h1>Just the file.<span>Nothing else.</span></h1>
+    <p class="tagline">
+      Paste a link. Get the video as a real mp4, with no mirror page, no ads
+      and no account.
+    </p>
+  </section>
 
   <form id="resolve-form" autocomplete="off">
     <div class="field">
+      <svg class="icon field-icon" aria-hidden="true"><use href="#i-link"></use></svg>
       <input
         id="url"
         name="url"
@@ -46,26 +93,75 @@
         placeholder="https://x.com/user/status/1234567890"
         aria-label="Link to a post"
         required>
-      <button type="submit" id="submit">Get file</button>
+      <button type="submit" id="submit">
+        <span class="label">Get file</span>
+        <svg class="icon" aria-hidden="true"><use href="#i-download"></use></svg>
+      </button>
     </div>
-    <!-- Static text is the fallback; app.js rewrites this from /api/platforms,
-         so the line stays honest as the registry grows. -->
-    <p class="hint" id="supported">Works with X (Twitter) links.</p>
+
+    <!-- Read-only: these name what the box accepts, so they are labelled text
+         rather than pills, which would read as buttons. The label sits outside
+         #supported because app.js rebuilds only the list from /api/platforms.
+         The static entries are the fallback for a failed request. -->
+    <p class="platforms">
+      <span class="platforms-label">Works with</span>
+      <span class="platform-list" id="supported">
+        <span class="chip"><svg class="icon" aria-hidden="true"><use href="#i-x"></use></svg>X (Twitter)</span>
+        <span class="chip"><svg class="icon" aria-hidden="true"><use href="#i-reddit"></use></svg>Reddit</span>
+      </span>
+    </p>
   </form>
 
   <p id="message" class="message" role="status" aria-live="polite" hidden></p>
 
   <section id="results" class="results" aria-live="polite"></section>
 
+  <ul class="assurances">
+    <li>
+      <svg class="icon" aria-hidden="true"><use href="#i-bolt"></use></svg>
+      <span><strong>Straight from the source.</strong> Bytes go to your browser, not through a middleman.</span>
+    </li>
+    <li>
+      <svg class="icon" aria-hidden="true"><use href="#i-eye-off"></use></svg>
+      <span><strong>No log of what you asked for.</strong> Nothing here records the links you paste.</span>
+    </li>
+    <li>
+      <svg class="icon" aria-hidden="true"><use href="#i-shield"></use></svg>
+      <span><strong>No account, no watermark.</strong> The original file, named properly.</span>
+    </li>
+  </ul>
+
+  <!-- One bot per platform, not one bot for everything, so each card carries
+       the platform's own logo. app.js rebuilds this from /api/platforms; the
+       markup below is the fallback for a failed request. -->
+  <section class="bots">
+    <h2>
+      <svg class="icon" aria-hidden="true"><use href="#i-telegram"></use></svg>
+      Prefer Telegram?
+    </h2>
+    <p class="bots-intro">A bot per platform. Send it a link, get the mp4 back in the chat.</p>
+    <div class="bot-grid" id="bots">
+      <a class="bot" href="https://t.me/xwitter_downloader_bot" rel="noopener" target="_blank">
+        <svg class="icon brand" aria-hidden="true"><use href="#i-x"></use></svg>
+        <span class="bot-text">
+          <strong>X (Twitter)</strong>
+          <span class="handle">@xwitter_downloader_bot</span>
+        </span>
+        <svg class="icon go" aria-hidden="true"><use href="#i-telegram"></use></svg>
+      </a>
+      <a class="bot" href="https://t.me/rddt_downloader_bot" rel="noopener" target="_blank">
+        <svg class="icon brand" aria-hidden="true"><use href="#i-reddit"></use></svg>
+        <span class="bot-text">
+          <strong>Reddit</strong>
+          <span class="handle">@rddt_downloader_bot</span>
+        </span>
+        <svg class="icon go" aria-hidden="true"><use href="#i-telegram"></use></svg>
+      </a>
+    </div>
+  </section>
+
   <footer>
-    <p>
-      Files download straight from the source to your browser. Nothing is stored
-      here, and nobody records what you asked for.
-    </p>
-    <p>
-      Prefer Telegram? There's a bot for X posts:
-      <a href="https://t.me/xwitter_downloader_bot" rel="noopener">@xwitter_downloader_bot</a>
-    </p>
+    <p>Free, no account, nothing stored.</p>
   </footer>
 </main>
 
@@ -73,7 +169,9 @@
   <article class="card">
     <div class="preview">
       <img class="thumb" alt="" loading="lazy" hidden>
-      <div class="thumb placeholder" aria-hidden="true"></div>
+      <div class="thumb placeholder" aria-hidden="true">
+        <svg class="icon" aria-hidden="true"><use href="#i-play"></use></svg>
+      </div>
       <span class="badge"></span>
     </div>
     <div class="options">

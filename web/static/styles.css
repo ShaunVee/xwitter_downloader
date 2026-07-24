@@ -6,17 +6,24 @@
   --bg: #0b1016;
   --surface: #141c26;
   --surface-2: #1b2634;
+  --surface-hover: #22303f;
   --line: #24313f;
+  --line-strong: #35465a;
   --text: #e8eef5;
   --muted: #8ba0b6;
   /* Indigo, not the #1d9bf0 this started as: that is X's blue, and the site is
      no longer an X tool. Matches the folded corner in the logo. */
   --accent: #6366f1;
   --accent-hover: #4f46e5;
+  --accent-soft: rgb(99 102 241 / 0.14);
   --accent-ink: #ffffff;
   --danger: #f4576b;
+  --ok: #34d399;
   --radius: 14px;
+  --radius-lg: 20px;
   --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.25);
+  --shadow-lift: 0 1px 2px rgb(0 0 0 / 0.4), 0 18px 40px rgb(0 0 0 / 0.35);
+  --ring: 0 0 0 3px rgb(99 102 241 / 0.32);
 }
 
 @media (prefers-color-scheme: light) {
@@ -24,66 +31,153 @@
     --bg: #f5f8fb;
     --surface: #ffffff;
     --surface-2: #eef3f8;
+    --surface-hover: #e3ebf4;
     --line: #dae3ec;
+    --line-strong: #c3d1e0;
     --text: #0f1922;
     --muted: #5b6b7c;
+    --accent-soft: rgb(99 102 241 / 0.1);
     --shadow: 0 1px 2px rgb(15 25 34 / 0.06), 0 8px 24px rgb(15 25 34 / 0.08);
+    --shadow-lift: 0 1px 2px rgb(15 25 34 / 0.08), 0 18px 40px rgb(15 25 34 / 0.12);
   }
 }
 
 * { box-sizing: border-box; }
 
+/* The UA rule for [hidden] is display:none at the lowest precedence, so any
+   author `display` on the same element silently beats it. `.thumb` does exactly
+   that, which left a broken-image box stacked above the placeholder on posts
+   with no thumbnail. */
+[hidden] { display: none !important; }
+
 body {
   margin: 0;
-  padding: clamp(1.5rem, 5vw, 4rem) 1.25rem 3rem;
+  padding: clamp(1.25rem, 4vw, 2.5rem) 1.25rem 3rem;
   background: var(--bg);
   color: var(--text);
   font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto,
         "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
+  /* The glow is fixed and bleeds past the viewport; without this a phone in
+     landscape gets a stray horizontal scrollbar. */
+  overflow-x: hidden;
 }
 
-main { max-width: 44rem; margin: 0 auto; }
+main { max-width: 60rem; margin: 0 auto; position: relative; }
+
+/* Ambient light behind the fold. Purely decorative, sits under everything, and
+   costs one composited layer. */
+.glow {
+  position: fixed;
+  inset: -30vh 0 auto;
+  height: 70vh;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(42rem 26rem at 50% 0%, rgb(99 102 241 / 0.22), transparent 70%),
+    radial-gradient(30rem 20rem at 85% 10%, rgb(56 189 248 / 0.10), transparent 70%);
+}
+
+.sprite { display: none; }
+
+/* Every icon is a currentColor glyph, so one symbol works in both schemes and
+   picks up hover states for free. */
+.icon {
+  width: 1.15em;
+  height: 1.15em;
+  flex: none;
+  display: block;
+}
 
 /* ---- masthead ---- */
 
-.masthead { text-align: center; margin-bottom: 2rem; }
-.logo { display: block; margin: 0 auto 0.75rem; border-radius: 12px; }
+.masthead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: clamp(2rem, 7vw, 3.5rem);
+}
 
-h1 {
-  margin: 0 0 0.35rem;
-  font-size: clamp(1.6rem, 5vw, 2.1rem);
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.logo { border-radius: 11px; }
+
+/* Wordmark reads as three words at one glance without needing three colours. */
+.wordmark {
+  font-size: 1.15rem;
+  font-weight: 650;
   letter-spacing: -0.02em;
 }
 
-/* Wordmark reads as three words at one glance without needing three colours. */
 .wordmark span { color: var(--muted); }
 
-.tagline { margin: 0; color: var(--muted); }
+/* ---- hero ---- */
+
+.hero { text-align: center; margin-bottom: 1.75rem; }
+
+h1 {
+  margin: 0 0 0.6rem;
+  font-size: clamp(2rem, 7vw, 3rem);
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+  font-weight: 700;
+}
+
+/* Second half drops back so the line reads as a claim and its qualifier. */
+h1 span { display: block; color: var(--muted); }
+
+/* Wide enough that the tagline sets on one line at desktop, still a readable
+   measure when it does wrap. */
+.tagline {
+  margin: 0 auto;
+  max-width: 46rem;
+  font-size: 1.05rem;
+  color: var(--muted);
+}
 
 /* ---- form ---- */
 
-.field { display: flex; gap: 0.5rem; }
+.field {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.4rem 0.4rem 0.9rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+/* The whole bar reacts, not just the input: it looks like one control, so it
+   should focus like one. */
+.field:focus-within {
+  border-color: var(--accent);
+  box-shadow: var(--ring), var(--shadow);
+}
+
+.field-icon { color: var(--muted); font-size: 1.15rem; }
 
 input[type="text"] {
   flex: 1 1 auto;
   min-width: 0;
-  padding: 0.85rem 1rem;
+  padding: 0.7rem 0;
+  font: inherit;
   font-size: 1rem;
   color: var(--text);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  transition: border-color 0.15s, box-shadow 0.15s;
+  background: none;
+  border: 0;
 }
 
-input[type="text"]::placeholder { color: var(--muted); opacity: 0.7; }
-
-input[type="text"]:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgb(99 102 241 / 0.28);
-}
+input[type="text"]:focus { outline: none; }
+input[type="text"]::placeholder { color: var(--muted); opacity: 0.65; }
 
 button {
   font: inherit;
@@ -91,32 +185,83 @@ button {
   cursor: pointer;
   border: 1px solid transparent;
   border-radius: var(--radius);
-  transition: background 0.15s, transform 0.05s, opacity 0.15s;
+  transition: background 0.15s, color 0.15s, border-color 0.15s,
+              transform 0.05s, opacity 0.15s;
 }
 
 button:active:not(:disabled) { transform: translateY(1px); }
 button:disabled { opacity: 0.55; cursor: default; }
+button:focus-visible { outline: none; box-shadow: var(--ring); }
 
 #submit {
   flex: 0 0 auto;
-  padding: 0.85rem 1.35rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.7rem 1.1rem;
   color: var(--accent-ink);
   background: var(--accent);
 }
 
 #submit:hover:not(:disabled) { background: var(--accent-hover); }
 
-.hint { margin: 0.6rem 0.25rem 0; font-size: 0.85rem; color: var(--muted); }
+/* On a phone the button collapses to its icon, which keeps the URL itself
+   readable in the space that's left. */
+@media (max-width: 26rem) {
+  #submit .label { display: none; }
+  #submit { padding: 0.7rem 0.85rem; font-size: 1.15rem; }
+}
+
+/* ---- supported platforms ---- */
+
+/* No pill, no border, no fill: nothing here is clickable, and a rounded chip
+   on a surface reads as a button you can press. Plain text with the platform
+   mark beside it says the same thing without the false affordance. */
+.platforms {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  margin: 0.9rem 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.platform-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.chip .icon { font-size: 0.95rem; color: var(--muted); }
+
+.chip + .chip::before {
+  content: "\00b7";
+  margin-right: 0.35rem;
+  font-weight: 400;
+  color: var(--muted);
+}
 
 /* ---- messages ---- */
 
 .message {
   margin: 1.5rem 0 0;
   padding: 0.9rem 1.1rem;
+  font-size: 0.95rem;
   background: var(--surface);
   border: 1px solid var(--line);
   border-left: 3px solid var(--muted);
-  border-radius: 10px;
+  border-radius: 12px;
 }
 
 .message.error { border-left-color: var(--danger); }
@@ -124,17 +269,32 @@ button:disabled { opacity: 0.55; cursor: default; }
 
 /* ---- results ---- */
 
-.results { margin-top: 1.75rem; display: grid; gap: 1rem; }
+.results { margin-top: 1.25rem; display: grid; gap: 1rem; }
+.results:empty { margin-top: 0; }
 
 .card {
   display: grid;
-  grid-template-columns: 9rem 1fr;
+  grid-template-columns: 12rem 1fr;
+  align-items: start;
   gap: 1.1rem;
   padding: 1rem;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow);
+  transition: border-color 0.18s, box-shadow 0.18s, transform 0.18s;
+  animation: rise 0.28s ease-out both;
+}
+
+.card:hover {
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-lift);
+  transform: translateY(-2px);
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
 }
 
 @media (max-width: 30rem) {
@@ -149,23 +309,30 @@ button:disabled { opacity: 0.55; cursor: default; }
   aspect-ratio: 16 / 10;
   object-fit: cover;
   background: var(--surface-2);
-  border-radius: 10px;
+  border-radius: 12px;
 }
 
-.thumb.placeholder { background: var(--surface-2); }
+.thumb.placeholder {
+  display: grid;
+  place-items: center;
+  font-size: 1.6rem;
+  color: var(--muted);
+  opacity: 0.5;
+}
 
 .badge {
   position: absolute;
   left: 0.5rem;
   bottom: 0.5rem;
   padding: 0.15rem 0.5rem;
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   color: #fff;
-  background: rgb(0 0 0 / 0.72);
+  background: rgb(0 0 0 / 0.7);
   border-radius: 999px;
+  backdrop-filter: blur(6px);
 }
 
 .options { display: flex; flex-direction: column; gap: 0.7rem; min-width: 0; }
@@ -175,15 +342,27 @@ button:disabled { opacity: 0.55; cursor: default; }
 .qualities { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 
 .quality {
-  padding: 0.55rem 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.85rem;
+  font-size: 0.92rem;
   color: var(--text);
   background: var(--surface-2);
   border-color: var(--line);
 }
 
-.quality:hover:not(:disabled) { background: var(--accent); color: var(--accent-ink); }
+.quality .icon { font-size: 0.95rem; color: var(--muted); transition: color 0.15s; }
 
-.quality .size { font-weight: 400; opacity: 0.7; margin-left: 0.35rem; }
+.quality:hover:not(:disabled) {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+.quality:hover:not(:disabled) .icon { color: currentColor; }
+
+.quality .size { font-weight: 400; opacity: 0.7; }
 
 /* ---- download progress ---- */
 
@@ -198,7 +377,7 @@ button:disabled { opacity: 0.55; cursor: default; }
   display: block;
   height: 100%;
   width: 0;
-  background: var(--accent);
+  background: linear-gradient(90deg, var(--accent), #818cf8);
   border-radius: inherit;
   transition: width 0.15s linear;
 }
@@ -214,11 +393,138 @@ button:disabled { opacity: 0.55; cursor: default; }
 }
 
 .progress-label { margin: 0.4rem 0 0; font-size: 0.8rem; color: var(--muted); }
+.progress-label.done { color: var(--ok); }
+
+/* ---- assurances ---- */
+
+.assurances {
+  margin: clamp(2.5rem, 8vw, 4rem) 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+}
+
+.assurances li {
+  display: flex;
+  gap: 0.65rem;
+  padding: 0.9rem 1rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.assurances .icon {
+  font-size: 1.1rem;
+  margin-top: 0.1rem;
+  color: var(--accent);
+}
+
+.assurances strong { display: block; color: var(--text); font-weight: 600; }
+
+/* ---- telegram bots ---- */
+
+.bots { margin-top: clamp(2.5rem, 8vw, 4rem); }
+
+.bots h2 {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 0 0 0.35rem;
+  font-size: 1.15rem;
+  letter-spacing: -0.02em;
+}
+
+/* Telegram's own blue, not the site accent: here the glyph is naming a
+   product rather than acting as UI chrome. */
+.bots h2 .icon { color: #29a9eb; }
+
+.bots-intro {
+  margin: 0 0 1.1rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.bot-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+}
+
+.bot {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 1rem;
+  color: inherit;
+  text-decoration: none;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+
+a.bot:hover,
+a.bot:focus-visible {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-lift);
+  transform: translateY(-2px);
+}
+
+a.bot:focus-visible { outline: none; box-shadow: var(--ring); }
+
+/* The platform's own logo leads, because that is what tells you which bot this
+   is; the Telegram mark is the small trailing cue for where it opens. */
+.bot .brand {
+  font-size: 1.35rem;
+  width: 2.4rem;
+  height: 2.4rem;
+  padding: 0.52rem;
+  color: var(--text);
+  background: var(--surface-2);
+  border-radius: 10px;
+}
+
+.bot-text { display: flex; flex-direction: column; min-width: 0; }
+.bot-text strong { font-size: 0.95rem; font-weight: 600; }
+
+.bot .handle {
+  font-size: 0.8rem;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bot .go {
+  margin-left: auto;
+  font-size: 1.1rem;
+  color: var(--muted);
+  transition: color 0.15s, transform 0.15s;
+}
+
+a.bot:hover .go,
+a.bot:focus-visible .go { color: #29a9eb; transform: translateX(2px); }
+
+/* A platform with no bot yet still gets a card, so the row shows what is
+   coming rather than pretending the platform is unsupported. */
+.bot.pending {
+  border-style: dashed;
+  cursor: default;
+}
+
+.bot.pending .brand,
+.bot.pending .bot-text strong { color: var(--muted); }
 
 /* ---- footer ---- */
 
 footer {
-  margin-top: 3rem;
+  margin-top: 2rem;
   font-size: 0.85rem;
   color: var(--muted);
   text-align: center;

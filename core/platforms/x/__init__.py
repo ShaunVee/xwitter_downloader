@@ -16,6 +16,11 @@ NAME = "x"
 LABEL = "X (Twitter)"
 HOSTS = ("x.com", "twitter.com", "t.co")
 
+# The Telegram bot that serves this platform, if one is running. One bot per
+# platform rather than one bot for all of them: each gets its own name, and a
+# platform without a bot yet simply omits this.
+TELEGRAM_BOT = "xwitter_downloader_bot"
+
 # Hosts the download endpoint may fetch from. A safety net: every URL it
 # handles already came from our own extraction, never from the caller.
 MEDIA_HOSTS = ("video.twimg.com", "pbs.twimg.com")

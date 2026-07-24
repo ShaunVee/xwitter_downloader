@@ -6,6 +6,8 @@ Reddit hands out more link shapes than X does, and people paste all of them:
     reddit.com/comments/<id>                 what redd.it shortlinks expand to
     old.reddit.com/..., np.reddit.com/...    mirrors of the same paths
     redd.it/<id>                             shortlink, expands by redirect
+    reddit.com/gallery/<id>                  what the share button gives for a
+                                             multi-image post
     reddit.com/r/sub/s/<token>               what the mobile app's share sheet
                                              produces, and by far the most
                                              common form in the wild
@@ -13,6 +15,10 @@ Reddit hands out more link shapes than X does, and people paste all of them:
 The `/s/` form carries no post ID at all, only an opaque token, so it has to be
 followed. That is the same problem t.co poses on the X side and is solved the
 same way.
+
+`/gallery/` is the odd one: a different path to the same post, so the ID in it
+is the post's own and needs no redirect. Missing it meant a gallery link pasted
+from the share button looked like no Reddit link at all.
 """
 
 from __future__ import annotations
@@ -37,6 +43,7 @@ _HOSTS = {
 _ID = r"[a-z0-9]{5,10}"
 
 _COMMENTS_RE = re.compile(rf"^/(?:r/[^/]+/)?comments/(?P<id>{_ID})", re.IGNORECASE)
+_GALLERY_RE = re.compile(rf"^/gallery/(?P<id>{_ID})/?$", re.IGNORECASE)
 _SHORT_PATH_RE = re.compile(rf"^/(?P<id>{_ID})/?$", re.IGNORECASE)
 _SHARE_RE = re.compile(r"^/r/[^/]+/s/[A-Za-z0-9]+", re.IGNORECASE)
 _URL_RE = re.compile(r"https?://[^\s<>\"]+", re.IGNORECASE)
@@ -88,7 +95,7 @@ def post_id_from_url(url: str) -> Optional[str]:
         match = _SHORT_PATH_RE.match(path)
         return match.group("id").lower() if match else None
 
-    match = _COMMENTS_RE.match(path)
+    match = _COMMENTS_RE.match(path) or _GALLERY_RE.match(path)
     return match.group("id").lower() if match else None
 
 

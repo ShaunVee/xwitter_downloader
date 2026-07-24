@@ -18,6 +18,21 @@ const template = document.getElementById("media-card");
 
 const KIND_LABELS = { video: "Video", gif: "GIF", photo: "Photo" };
 
+/* Sprite symbol per platform name. A platform with no glyph yet falls back to
+   the generic link icon, so adding one to the registry never leaves a hole in
+   the row. */
+const PLATFORM_ICONS = { x: "i-x", reddit: "i-reddit" };
+
+function icon(id) {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("class", "icon");
+  svg.setAttribute("aria-hidden", "true");
+  const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
+  use.setAttribute("href", `#${id}`);
+  svg.appendChild(use);
+  return svg;
+}
+
 function say(text, kind) {
   message.textContent = text;
   message.className = `message${kind ? ` ${kind}` : ""}`;
@@ -125,7 +140,16 @@ function renderCard(item, payloadMeta) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "quality";
-    button.innerHTML = `${variant.label}<span class="size">${humanSize(variant.size_bytes)}</span>`;
+    button.appendChild(icon("i-download"));
+    button.appendChild(document.createTextNode(variant.label));
+
+    const size = humanSize(variant.size_bytes);
+    if (size) {
+      const tag = document.createElement("span");
+      tag.className = "size";
+      tag.textContent = size;
+      button.appendChild(tag);
+    }
 
     button.addEventListener("click", async () => {
       // Media the browser is not allowed to fetch goes through the server,
@@ -156,6 +180,7 @@ function renderCard(item, payloadMeta) {
           bar.classList.remove("indeterminate");
           fill.style.width = "100%";
           progressLabel.textContent = "Started. Check your downloads.";
+          progressLabel.classList.add("done");
         }, 1500);
         return;
       }
@@ -165,6 +190,7 @@ function renderCard(item, payloadMeta) {
       progress.hidden = false;
       bar.classList.add("indeterminate");
       fill.style.width = "";
+      progressLabel.classList.remove("done");
       progressLabel.textContent = "Starting…";
 
       try {
@@ -185,6 +211,7 @@ function renderCard(item, payloadMeta) {
         bar.classList.remove("indeterminate");
         fill.style.width = "100%";
         progressLabel.textContent = `Saved · ${humanSize(saved)}`;
+        progressLabel.classList.add("done");
       } catch (error) {
         bar.classList.remove("indeterminate");
         fill.style.width = "0";
@@ -216,7 +243,8 @@ async function resolve(url) {
     }
 
     const heading = payload.author ? `From @${payload.author}` : "Ready";
-    say(`${heading}: ${payload.media.length} item(s) found.`);
+    const count = payload.media.length;
+    say(`${heading}: ${count} ${count === 1 ? "file" : "files"} ready.`);
     payload.media.forEach((item) =>
       results.appendChild(renderCard(item, payload))
     );
@@ -235,26 +263,80 @@ form.addEventListener("submit", (event) => {
 
 // Deep link support: /?url=... resolves on load, so the site can be wired up as
 // a share target or a bookmarklet.
-/* Keep the "works with" line in step with the registry, so shipping a new
-   platform is a server change only. The markup carries the current list as a
-   fallback, so a failed request leaves the page correct rather than blank. */
+/* Keep the platform row in step with the registry, so shipping a new platform
+   is a server change only. The markup carries the current list as a fallback,
+   so a failed request leaves the page correct rather than blank. */
 async function showSupported() {
   try {
     const response = await fetch("/api/platforms");
     if (!response.ok) return;
 
     const { platforms } = await response.json();
-    const labels = platforms.map((p) => p.label);
-    if (!labels.length) return;
+    if (!platforms.length) return;
 
-    const list =
-      labels.length === 1
-        ? labels[0]
-        : `${labels.slice(0, -1).join(", ")} and ${labels.at(-1)}`;
-    document.getElementById("supported").textContent = `Works with ${list} links.`;
+    const row = document.getElementById("supported");
+    row.replaceChildren(
+      ...platforms.map((platform) => {
+        const chip = document.createElement("span");
+        chip.className = "chip";
+        chip.appendChild(icon(PLATFORM_ICONS[platform.name] || "i-link"));
+        chip.appendChild(document.createTextNode(platform.label));
+        return chip;
+      })
+    );
+
+    showBots(platforms);
   } catch {
-    /* Leave the fallback text in place. */
+    /* Leave the fallback chips in place. */
   }
+}
+
+/* One card per platform, carrying that platform's logo. A platform whose
+   TELEGRAM_BOT is unset still gets a card, marked as pending: the row is then
+   a roadmap rather than a silent omission. */
+function showBots(platforms) {
+  const grid = document.getElementById("bots");
+
+  grid.replaceChildren(
+    ...platforms.map((platform) => {
+      const live = Boolean(platform.telegram_bot);
+      const card = document.createElement(live ? "a" : "span");
+      card.className = live ? "bot" : "bot pending";
+
+      if (live) {
+        card.href = `https://t.me/${platform.telegram_bot}`;
+        card.rel = "noopener";
+        card.target = "_blank";
+      }
+
+      const brand = icon(PLATFORM_ICONS[platform.name] || "i-link");
+      brand.setAttribute("class", "icon brand");
+      card.appendChild(brand);
+
+      const text = document.createElement("span");
+      text.className = "bot-text";
+
+      const name = document.createElement("strong");
+      name.textContent = platform.label;
+      text.appendChild(name);
+
+      const handle = document.createElement("span");
+      handle.className = "handle";
+      handle.textContent = live
+        ? `@${platform.telegram_bot}`
+        : "Bot coming soon. Use the box above.";
+      text.appendChild(handle);
+      card.appendChild(text);
+
+      if (live) {
+        const go = icon("i-telegram");
+        go.setAttribute("class", "icon go");
+        card.appendChild(go);
+      }
+
+      return card;
+    })
+  );
 }
 
 showSupported();

@@ -29,7 +29,7 @@ class QueueFull(RuntimeError):
 class Job:
     user_id: int
     chat_id: int
-    tweet_id: str
+    post_id: str
     payload: dict[str, Any] = field(default_factory=dict)
 
 
@@ -94,7 +94,7 @@ class JobQueue:
                 raise
             except Exception:
                 # A crashing job must never take the worker down with it.
-                log.exception("job failed (%s, tweet %s)", name, job.tweet_id)
+                log.exception("job failed (%s, post %s)", name, job.post_id)
             finally:
                 self._per_user[job.user_id] = max(0, self._per_user[job.user_id] - 1)
                 self._queue.task_done()

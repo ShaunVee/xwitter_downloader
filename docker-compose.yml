@@ -3,31 +3,59 @@
 # the folder silently orphans the bot's file_id cache.
 name: justthefile
 
+# One image, one service per bot. Each bot is a standalone: its own token, its
+# own BotFather identity and its own cache, differing only by PLATFORM. Adding
+# a third is a copy of the block below, not a second codebase.
 services:
-  bot:
+  bot-x:
     build: .
     image: justthefile:latest
-    container_name: justthefile-bot
+    container_name: justthefile-bot-x
     restart: unless-stopped
     env_file:
       - .env
     environment:
+      PLATFORM: x
       # Overrides .env so the paths always match the volumes below.
       CACHE_DB: /data/cache.sqlite
-      TMP_DIR: /tmp/xdl
+      TMP_DIR: /tmp/bot
     volumes:
       # file_id cache. Must survive restarts, or every video gets re-fetched.
-      - cache:/data
+      # One per bot: two processes writing one SQLite file buys nothing, since
+      # a file_id from one bot's token is not sendable by another's anyway.
+      - cache-x:/data
       # Scratch space for downloads and transcodes. Disk-backed so this runs on a
       # small VPS; files are deleted as soon as each job finishes.
       #
       # On a host with RAM to spare (8 GB+), swapping this for a tmpfs keeps the
       # churn off the disk entirely:
       #     - type: tmpfs
-      #       target: /tmp/xdl
+      #       target: /tmp/bot
       #       tmpfs:
       #         size: 2g
-      - scratch:/tmp/xdl
+      - scratch-x:/tmp/bot
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  bot-reddit:
+    build: .
+    image: justthefile:latest
+    container_name: justthefile-bot-reddit
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      PLATFORM: reddit
+      CACHE_DB: /data/cache.sqlite
+      TMP_DIR: /tmp/bot
+    volumes:
+      - cache-reddit:/data
+      # Reddit needs more scratch headroom than X: a video with sound is
+      # downloaded as two files and then written out a third time by the mux.
+      - scratch-reddit:/tmp/bot
     logging:
       driver: json-file
       options:
@@ -66,6 +94,11 @@ services:
         max-file: "3"
 
 volumes:
-  cache:
-  scratch:
+  # `cache` and `scratch` (unsuffixed) belonged to the single-bot layout this
+  # replaces. Nothing mounts them now, so `docker volume rm justthefile_cache
+  # justthefile_scratch` reclaims the space once the new bots are up.
+  cache-x:
+  scratch-x:
+  cache-reddit:
+  scratch-reddit:
   webscratch:

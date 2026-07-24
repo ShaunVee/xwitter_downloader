@@ -23,6 +23,11 @@ NAME = "reddit"
 LABEL = "Reddit"
 HOSTS = ("reddit.com", "redd.it")
 
+# The Telegram bot serving this platform. One bot per platform rather than one
+# bot for all of them: each gets its own name, photo and copy. The site links to
+# it from the bot row and shows "coming soon" while this is unset.
+TELEGRAM_BOT = "rddt_downloader_bot"
+
 # Hosts the download endpoint may fetch from. A safety net: every URL it
 # handles already came from our own extraction, never from the caller.
 MEDIA_HOSTS = ("v.redd.it", "i.redd.it")
