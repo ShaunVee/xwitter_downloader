@@ -1,8 +1,13 @@
+# Pinned so the project name, and therefore the volume names, no longer depend
+# on what the checkout directory happens to be called. Without this, renaming
+# the folder silently orphans the bot's file_id cache.
+name: justthefile
+
 services:
   bot:
     build: .
-    image: xwitter-downloader:latest
-    container_name: xwitter-downloader
+    image: justthefile:latest
+    container_name: justthefile-bot
     restart: unless-stopped
     env_file:
       - .env
@@ -31,8 +36,8 @@ services:
 
   web:
     build: .
-    image: xwitter-downloader:latest
-    container_name: xwitter-downloader-web
+    image: justthefile:latest
+    container_name: justthefile-web
     restart: unless-stopped
     command: ["python", "-m", "web.api"]
     env_file:

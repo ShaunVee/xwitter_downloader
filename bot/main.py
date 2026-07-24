@@ -91,7 +91,7 @@ class Runtime:
         self.cache = FileIdCache(cfg.cache_db)
         self.client = httpx.AsyncClient(
             follow_redirects=True,
-            headers={"User-Agent": "Mozilla/5.0 (compatible; xwitter-downloader/1.0)"},
+            headers={"User-Agent": "Mozilla/5.0 (compatible; justthefile/1.0)"},
         )
         self.tmp_root = Path(cfg.tmp_dir)
 

@@ -28,7 +28,7 @@ log = logging.getLogger(__name__)
 
 ENDPOINT = "https://api.fxtwitter.com/x/status/{tweet_id}"
 
-_HEADERS = {"User-Agent": "xwitter-downloader/1.0", "Accept": "application/json"}
+_HEADERS = {"User-Agent": "justthefile/1.0", "Accept": "application/json"}
 
 
 def parse(payload: dict[str, Any], tweet_id: str) -> TweetMedia:
