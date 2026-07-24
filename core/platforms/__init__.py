@@ -18,13 +18,20 @@ from typing import Optional
 import httpx
 
 from . import reddit, x
-from .base import DIRECT, Resolution
+from .base import DIRECT, LinkUnresolved, Resolution
 
 log = logging.getLogger(__name__)
 
 REGISTRY: tuple[ModuleType, ...] = (x, reddit)
 
-__all__ = ["REGISTRY", "PostRef", "Resolution", "identify", "supported"]
+__all__ = [
+    "REGISTRY",
+    "LinkUnresolved",
+    "PostRef",
+    "Resolution",
+    "identify",
+    "supported",
+]
 
 
 @dataclass(frozen=True)
@@ -68,10 +75,18 @@ async def identify(url: str, client: httpx.AsyncClient) -> Optional[PostRef]:
 
     Split from fetching so the cache can be consulted on the post's identity
     without paying for the upstream lookup that produces its media.
+
+    Raises LinkUnresolved when a platform recognised the link but couldn't
+    follow the redirect it hides behind. See `base`.
     """
     for handler in REGISTRY:
         try:
             post_id = await handler.identify(url, client)
+        except LinkUnresolved:
+            # This handler claimed the link and couldn't follow it. No other
+            # platform is going to do better with it, and swallowing it here
+            # would put the answer back to "unrecognised link".
+            raise
         except Exception:
             # One platform's parser blowing up must not make the whole site
             # reject a link another platform could have handled.

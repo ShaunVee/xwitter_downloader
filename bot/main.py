@@ -13,6 +13,7 @@ with a different environment variable rather than a second implementation.
 from __future__ import annotations
 
 import logging
+import os
 import re
 import shutil
 import tempfile
@@ -35,7 +36,7 @@ from telegram.ext import (
 )
 
 from core import mux, select
-from core.platforms import REGISTRY
+from core.platforms import REGISTRY, LinkUnresolved
 
 from . import profile, transcode
 from .access import is_allowed
@@ -468,7 +469,16 @@ async def on_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     if message is None or not message.text:
         return
 
-    post_id = await runtime.handler.identify(message.text, runtime.client)
+    try:
+        post_id = await runtime.handler.identify(message.text, runtime.client)
+    except LinkUnresolved as exc:
+        # The link is one we handle; the site it hides behind wouldn't answer.
+        # Telling someone their link is unrecognisable here is a wrong answer
+        # that costs them a round of pointless link-fixing.
+        log.warning("could not resolve %s", exc.url)
+        await message.reply_text(runtime.profile.link_unresolved)
+        return
+
     if not post_id:
         await message.reply_text(runtime.profile.unknown_link)
         return
@@ -543,6 +553,30 @@ def build_application(cfg: Config) -> Application:
     return app
 
 
+def check_scratch(cfg: Config) -> None:
+    """Refuse to start if downloads have nowhere to land.
+
+    Every job begins by making a directory under TMP_DIR, so an unwritable one
+    means no job can ever succeed. Without this the bot starts happily, accepts
+    work, says "Queued…" and only then fails, once per job, for as long as it
+    stays up. A mounted volume that the image never created is owned by root
+    while this process is not, which is the way this actually happens.
+    """
+    path = Path(cfg.tmp_dir)
+    try:
+        path.mkdir(parents=True, exist_ok=True)
+        probe = tempfile.mkdtemp(prefix="startup-", dir=path)
+    except OSError as exc:
+        raise SystemExit(
+            f"Scratch directory {cfg.tmp_dir} is not usable: {exc}\n"
+            f"Every download lands there first, so nothing can run without it. "
+            f"Running as uid {os.getuid()}. If it's a Docker volume, it is "
+            f"owned by root: `docker compose down`, `docker volume rm` the "
+            f"scratch volume, then rebuild so the image creates the path."
+        ) from exc
+    os.rmdir(probe)
+
+
 def main() -> None:
     cfg = Config.from_env()
     logging.basicConfig(
@@ -550,6 +584,8 @@ def main() -> None:
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
     logging.getLogger("httpx").setLevel(logging.WARNING)
+
+    check_scratch(cfg)
 
     if not transcode.available():
         log.warning("ffmpeg/ffprobe not found: oversized videos cannot be compressed")

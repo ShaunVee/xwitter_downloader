@@ -90,7 +90,20 @@ def create_app(cfg: WebConfig | None = None) -> FastAPI:
 
         client: httpx.AsyncClient = request.app.state.client
 
-        ref = await platforms.identify(url, client)
+        try:
+            ref = await platforms.identify(url, client)
+        except platforms.LinkUnresolved as exc:
+            # A share link we recognised and couldn't follow. 502, not 400:
+            # nothing about the link needs changing.
+            log.warning("could not resolve %s", exc.url)
+            return JSONResponse(
+                {
+                    "error": "That share link wouldn't resolve just now. Try "
+                    "again in a moment, or paste the post's full link."
+                },
+                status_code=502,
+            )
+
         if ref is None:
             return JSONResponse(
                 {

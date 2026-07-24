@@ -25,9 +25,22 @@ COPY bot/ ./bot/
 COPY web/ ./web/
 
 # Run unprivileged. /data holds the file_id cache and must outlive the container.
+#
+# The scratch paths have to be created here even though compose mounts volumes
+# over them. Docker takes a fresh volume's ownership from the image directory
+# it covers, and where the image has no such directory the volume comes up
+# owned by root. This process is not root, so every job then dies on mkdtemp
+# after the user has already been told it was queued. That is exactly what
+# renaming the bot's scratch from /tmp/xdl to /tmp/bot did, since only the old
+# name was ever created here.
+#
+#   /tmp/bot            the bots' scratch (TMP_DIR in compose)
+#   /tmp/justthefile-bot  the bots' default when TMP_DIR is unset
+#   /tmp/justthefile    the web front end's mux scratch (WEB_TMP_DIR)
 RUN useradd --create-home --uid 10001 botuser \
-    && mkdir -p /data /tmp/xdl \
-    && chown -R botuser:botuser /data /tmp/xdl /app
+    && mkdir -p /data /tmp/bot /tmp/justthefile-bot /tmp/justthefile \
+    && chown -R botuser:botuser \
+        /data /tmp/bot /tmp/justthefile-bot /tmp/justthefile /app
 USER botuser
 
 VOLUME ["/data"]

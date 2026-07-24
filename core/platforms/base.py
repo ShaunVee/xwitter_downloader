@@ -18,6 +18,10 @@ shortlink says nothing about its destination until it is followed.
 Returning None from `identify` means "not my platform" and lets the registry
 try the next one. A `Resolution` with no items means "mine, but there's nothing
 in it": a different answer, and a different HTTP status.
+
+Raising `LinkUnresolved` from `identify` is the third answer: "mine, but the
+network hop that resolves it failed". Folding that into None told people their
+link was unrecognisable when the link was fine and the site was not.
 """
 
 from __future__ import annotations
@@ -43,6 +47,20 @@ from core.models import MediaItem
 DIRECT = "direct"
 PROXY = "proxy"
 PROXY_MUX = "proxy_mux"
+
+
+class LinkUnresolved(Exception):
+    """A link this platform owns, whose shortlink could not be followed.
+
+    Only shapes that carry no ID of their own can raise this: a /s/ share link
+    or a t.co, where the ID exists nowhere but at the other end of a redirect.
+    Anything the parser can read on its own never touches the network and so
+    never fails this way.
+    """
+
+    def __init__(self, url: str) -> None:
+        super().__init__(f"could not resolve {url}")
+        self.url = url
 
 
 @dataclass(frozen=True)

@@ -48,6 +48,8 @@ class Profile:
     # BotFather /setname. Kept here so the intended value is recorded somewhere.
     name: str
     # BotFather /setuserpic, which has no API method at all. Repo-relative.
+    # One mark per bot, never assets/logo.png: that one is the site's, and a
+    # bot wearing it would claim the whole project as one platform's.
     photo: str
     # Profile page, under the photo. Also what Telegram shows when the bot is
     # forwarded or shared as a link.
@@ -59,12 +61,21 @@ class Profile:
     # Reply when someone sends text that isn't a link this bot handles. Naming
     # the shape of a good link is the whole job of this string.
     unknown_link: str
+    # Reply when the link was ours but the redirect behind it wouldn't answer.
+    # Separate from unknown_link because the two ask for opposite things: one
+    # wants a better link, this one wants the same link again in a minute.
+    # Defaulted because it blames nothing the sender did, so it names no
+    # platform and no link shape; override it where there's more to say.
+    link_unresolved: str = (
+        "I couldn't follow that link just now. That's on the site, not on you: "
+        "send the same link again in a moment."
+    )
     commands: tuple[tuple[str, str], ...] = COMMANDS
 
 
 X = Profile(
     name="X Media Downloader",
-    photo="assets/logo.png",
+    photo="assets/bot-x.png",
     short_description=(
         "Send an X (Twitter) post link, get the video back as an mp4. "
         "Handles multi-video posts, GIFs, images and t.co links."
@@ -126,6 +137,14 @@ REDDIT = Profile(
         "That doesn't look like a Reddit post link. Send something like\n"
         "https://reddit.com/r/videos/comments/abc123/title\n"
         "A share link from the app (/s/…) or a redd.it link works too."
+    ),
+    # A /s/ link is a token, not a post: it means nothing until Reddit says
+    # what it points at. When Reddit won't say, the link is still fine, so the
+    # copy has to keep the blame off it.
+    link_unresolved=(
+        "Reddit wouldn't tell me where that share link goes. The link is fine: "
+        "send it again in a moment, or paste the post's full "
+        "reddit.com/r/…/comments/… link, which needs no lookup."
     ),
 )
 

@@ -23,21 +23,15 @@ import httpx
 from core.models import PHOTO, VIDEO, MediaItem, Variant
 
 from .. import dash
+from ..headers import HEADERS
 
 log = logging.getLogger(__name__)
 
 ENDPOINT = "https://www.reddit.com/comments/{post_id}/.json"
 
-# Only User-Agent. Setting anything else, even Accept: */* which is the value
-# httpx sends by default, reliably earns a 403: injecting a header changes the
-# order they go out in, and Reddit fingerprints that order. Verified by sending
-# the identical value both ways, with only the ordering differing.
-_HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
-        "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
-    ),
-}
+# The header set Reddit answers, shared with the other provider and with the
+# share-link redirect. See `..headers` for why it is exactly this and no more.
+_HEADERS = HEADERS
 
 
 def _post_data(payload: Any) -> Optional[dict[str, Any]]:
