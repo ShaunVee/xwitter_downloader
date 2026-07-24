@@ -70,6 +70,16 @@ class Profile:
         "I couldn't follow that link just now. That's on the site, not on you: "
         "send the same link again in a moment."
     )
+    # Reply when the site turned us away: a 403 on our own address rather than
+    # a request that failed. Separate from link_unresolved because retrying is
+    # the one thing that cannot work, and because no other link shape gets
+    # round it either. Whatever this says, it must not send someone off editing
+    # a link or pressing send again to no effect.
+    upstream_blocked: str = (
+        "I can't reach that site from my server right now: it's turning my "
+        "requests away. Nothing wrong with your link, and no other link will "
+        "get through either. This one's mine to fix, so try again later."
+    )
     commands: tuple[tuple[str, str], ...] = COMMANDS
 
 
@@ -141,10 +151,21 @@ REDDIT = Profile(
     # A /s/ link is a token, not a post: it means nothing until Reddit says
     # what it points at. When Reddit won't say, the link is still fine, so the
     # copy has to keep the blame off it.
+    #
+    # The full-link suggestion is only offered here, on the retryable case.
+    # It used to be offered on every failure, including the one where Reddit
+    # was blocking the server outright, and there it was worse than useless:
+    # the canonical link goes to the same blocked host and fails too, one
+    # message later. Advice that cannot work reads as a brush-off.
     link_unresolved=(
-        "Reddit wouldn't tell me where that share link goes. The link is fine: "
-        "send it again in a moment, or paste the post's full "
+        "Reddit didn't answer when I asked where that share link goes. The "
+        "link is fine: send it again in a moment, or paste the post's full "
         "reddit.com/r/…/comments/… link, which needs no lookup."
+    ),
+    upstream_blocked=(
+        "Reddit is refusing requests from my server at the moment, so I can't "
+        "look up posts at all. Your link is fine and a full reddit.com link "
+        "won't help: it hits the same wall. Mine to fix, so do try later."
     ),
 )
 

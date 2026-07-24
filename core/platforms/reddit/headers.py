@@ -10,6 +10,11 @@ providers and the share-link redirect in `urls`. The redirect not using it was a
 bug. It inherited whatever User-Agent the shared client happened to carry, so a
 /s/ link could be refused while the providers sailed through, and the refusal
 surfaced to the user as "that doesn't look like a Reddit post link".
+
+Sent from one place now, `relay`, which is also where those requests get routed
+when Reddit is blocking this server's address outright. The same value is
+repeated once more in `relay/worker.js`, because the far end of that route is a
+different runtime and has no way to import this.
 """
 
 from __future__ import annotations

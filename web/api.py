@@ -33,6 +33,16 @@ log = logging.getLogger(__name__)
 
 STATIC_DIR = Path(__file__).parent / "static"
 
+# What a visitor is told when the site turned this server away rather than
+# failing to answer. One string for both places it can happen, because from
+# where the visitor sits they are the same event: a wall, ours, not theirs.
+# It offers no workaround on purpose. Every workaround worth suggesting goes
+# to the same blocked host, and advice that cannot work is worse than none.
+_BLOCKED = (
+    "That site is refusing requests from this server at the moment. Your link "
+    "is fine, and no other link will get through either. This one's on us."
+)
+
 
 def _client_ip(request: Request, trust_proxy: bool) -> str:
     """Caller identity for rate limiting.
@@ -95,7 +105,11 @@ def create_app(cfg: WebConfig | None = None) -> FastAPI:
         except platforms.LinkUnresolved as exc:
             # A share link we recognised and couldn't follow. 502, not 400:
             # nothing about the link needs changing.
-            log.warning("could not resolve %s", exc.url)
+            log.warning("could not resolve %s (%s)", exc.url, exc.reason)
+            if exc.refused:
+                # Offering the full link here would be advice that cannot work:
+                # it resolves against the same host that just refused us.
+                return JSONResponse({"error": _BLOCKED}, status_code=502)
             return JSONResponse(
                 {
                     "error": "That share link wouldn't resolve just now. Try "
@@ -119,6 +133,12 @@ def create_app(cfg: WebConfig | None = None) -> FastAPI:
 
         try:
             resolution = await ref.fetch(client)
+        except platforms.UpstreamRefused as exc:
+            # Not "try again in a moment", and emphatically not the empty-post
+            # answer below: the site refused us, and it will refuse the next
+            # attempt and every other link with it.
+            log.warning("refused %s (%d)", exc.post_id, exc.status)
+            return JSONResponse({"error": _BLOCKED}, status_code=502)
         except Exception:
             log.exception("resolve failed for %s", ref.cache_key)
             return JSONResponse(

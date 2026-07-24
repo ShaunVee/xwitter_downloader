@@ -18,7 +18,7 @@ from typing import Optional
 import httpx
 
 from . import reddit, x
-from .base import DIRECT, LinkUnresolved, Resolution
+from .base import DIRECT, LinkUnresolved, Resolution, UpstreamRefused
 
 log = logging.getLogger(__name__)
 
@@ -29,6 +29,7 @@ __all__ = [
     "LinkUnresolved",
     "PostRef",
     "Resolution",
+    "UpstreamRefused",
     "identify",
     "supported",
 ]

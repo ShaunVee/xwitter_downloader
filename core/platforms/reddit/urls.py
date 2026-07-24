@@ -34,10 +34,14 @@ from typing import Optional
 
 import httpx
 
-from ..base import LinkUnresolved
-from .headers import HEADERS
+from ..base import REFUSED, UNAVAILABLE, LinkUnresolved
+from . import relay
 
 log = logging.getLogger(__name__)
+
+# Reddit turning us away rather than failing to answer. Shared with the
+# providers, which face the same wall on the same addresses.
+_REFUSALS = frozenset({401, 403, 429})
 
 _HOSTS = {
     "reddit.com",
@@ -113,13 +117,14 @@ def post_id_from_url(url: str) -> Optional[str]:
 async def resolve_share_link(url: str, client: httpx.AsyncClient) -> str:
     """Follow a /s/ or redd.it link to whatever it really points at.
 
-    Sent with the same headers as every other Reddit-bound request. The hop
-    used to inherit the caller's client headers instead, which is the one
-    request in the codebase Reddit had a free hand to refuse.
+    Sent with the same headers as every other Reddit-bound request, and through
+    the relay when one is configured: this hop asks reddit.com itself, so a
+    blocked address fails it as surely as it fails the providers.
 
     Raises LinkUnresolved rather than handing back the URL it was given: that
     return value parsed as no post at all and was indistinguishable from a link
-    that was never Reddit's.
+    that was never Reddit's. The reason rides along, because "Reddit refused
+    us" and "Reddit didn't answer in time" deserve opposite advice.
     """
     try:
         # Normalized first: a pasted link with no scheme is one httpx refuses
@@ -130,28 +135,23 @@ async def resolve_share_link(url: str, client: httpx.AsyncClient) -> str:
 
     target = str(parsed)
     try:
-        response = await client.get(
-            target, headers=HEADERS, follow_redirects=True, timeout=10.0
-        )
+        status, final = await relay.redirect_of(target, client)
     except httpx.HTTPError as exc:
         log.warning("share link %s could not be followed: %s", target, exc)
-        raise LinkUnresolved(url) from exc
-
-    final = str(response.url)
+        raise LinkUnresolved(url, UNAVAILABLE) from exc
 
     # Whether the destination holds a post is the parser's call, not this
     # function's: a share link can point at something that simply isn't one.
     # What matters here is that the hop happened. A refusal is a 403 on the
     # /s/ URL itself, which raises nothing and leaves the URL unchanged, and
     # re-parsing that looks exactly like a link from some other site.
-    if response.is_success and final != target:
+    if final:
         log.info("share link %s -> %s", target, final)
         return final
 
-    log.warning(
-        "share link %s was not followed: %s (%d)", target, final, response.status_code
-    )
-    raise LinkUnresolved(url)
+    reason = REFUSED if status in _REFUSALS else UNAVAILABLE
+    log.warning("share link %s was not followed: %d (%s)", target, status, reason)
+    raise LinkUnresolved(url, reason)
 
 
 async def extract_post_id(text: str, client: httpx.AsyncClient) -> Optional[str]:

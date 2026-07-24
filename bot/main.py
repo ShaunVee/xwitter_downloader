@@ -36,7 +36,7 @@ from telegram.ext import (
 )
 
 from core import mux, select
-from core.platforms import REGISTRY, LinkUnresolved
+from core.platforms import REGISTRY, LinkUnresolved, UpstreamRefused
 
 from . import profile, transcode
 from .access import is_allowed
@@ -138,7 +138,16 @@ class Runtime:
 
         try:
             await status.set("Fetching post…", force=True)
-            post = await self.handler.fetch(job.post_id, self.client)
+            try:
+                post = await self.handler.fetch(job.post_id, self.client)
+            except UpstreamRefused as exc:
+                # Every source turned us away. This used to fall through to the
+                # empty-post reply below, which blamed the post for a wall of
+                # ours and sent people looking for a deletion that never was.
+                log.warning("refused %s (%d)", exc.post_id, exc.status)
+                await status.done()
+                await bot.send_message(job.chat_id, self.profile.upstream_blocked)
+                return
 
             if not post.items:
                 await status.done()
@@ -474,9 +483,15 @@ async def on_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     except LinkUnresolved as exc:
         # The link is one we handle; the site it hides behind wouldn't answer.
         # Telling someone their link is unrecognisable here is a wrong answer
-        # that costs them a round of pointless link-fixing.
-        log.warning("could not resolve %s", exc.url)
-        await message.reply_text(runtime.profile.link_unresolved)
+        # that costs them a round of pointless link-fixing. Being refused and
+        # being ignored are told apart, because only one of them is worth
+        # retrying and the wrong advice wastes the sender's time twice.
+        log.warning("could not resolve %s (%s)", exc.url, exc.reason)
+        await message.reply_text(
+            runtime.profile.upstream_blocked
+            if exc.refused
+            else runtime.profile.link_unresolved
+        )
         return
 
     if not post_id:

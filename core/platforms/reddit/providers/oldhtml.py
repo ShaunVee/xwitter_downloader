@@ -24,16 +24,16 @@ import httpx
 
 from core.models import PHOTO, VIDEO, MediaItem, Variant
 
-from .. import dash
-from ..headers import HEADERS
+from ...base import UpstreamRefused
+from .. import dash, relay
 
 log = logging.getLogger(__name__)
 
 ENDPOINT = "https://old.reddit.com/comments/{post_id}/"
 
-# The header set Reddit answers, shared with the other provider and with the
-# share-link redirect. See `..headers` for why it is exactly this and no more.
-_HEADERS = HEADERS
+# Statuses that mean "not you, and not now either": Reddit turning the caller
+# away rather than failing to answer. See `...base.REFUSED`.
+_REFUSALS = frozenset({401, 403, 429})
 
 _THING_RE = re.compile(r'<div[^>]*\bid="thing_t3_[a-z0-9]+"[^>]*>', re.IGNORECASE)
 _ATTR_RE = re.compile(r'data-([a-z-]+)="([^"]*)"', re.IGNORECASE)
@@ -124,17 +124,28 @@ def _thumbnail(html: str) -> Optional[str]:
 
 
 async def fetch(post_id: str, client: httpx.AsyncClient) -> dict[str, Any]:
-    """Returns {} on any miss, so the caller can fall through."""
+    """Returns {} on any miss, so the caller can fall through.
+
+    Except a refusal, which raises: falling through from one blocked source to
+    another produces an empty result indistinguishable from a post that really
+    holds nothing, and that answer sent people looking for a deleted post that
+    was never deleted.
+    """
     try:
-        response = await client.get(
-            ENDPOINT.format(post_id=post_id),
-            headers=_HEADERS,
-            timeout=15.0,
-            follow_redirects=True,
-        )
-        response.raise_for_status()
+        response = await relay.get(ENDPOINT.format(post_id=post_id), client)
     except httpx.HTTPError as exc:
         log.warning("old.reddit fetch failed for %s: %s", post_id, exc)
+        return {}
+
+    if response.status_code in _REFUSALS:
+        log.warning(
+            "old.reddit refused %s (%d)%s",
+            post_id, response.status_code, " via relay" if relay.enabled() else "",
+        )
+        raise UpstreamRefused(post_id, response.status_code)
+
+    if response.is_error:
+        log.warning("old.reddit answered %d for %s", response.status_code, post_id)
         return {}
 
     return await parse(response.text, post_id, client)

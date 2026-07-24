@@ -49,6 +49,18 @@ PROXY = "proxy"
 PROXY_MUX = "proxy_mux"
 
 
+# Why an upstream lookup failed. The difference decides what the user is told,
+# so it is carried rather than inferred:
+#
+#   REFUSED      the site turned us away and will keep doing so. Reddit blocks
+#                by IP address, and a blocked address is blocked for every link
+#                and every retry. Telling someone to try again is a lie, and
+#                telling them to send a different link shape is a worse one.
+#   UNAVAILABLE  a timeout, a connection error, a 5xx. Genuinely worth retrying.
+REFUSED = "refused"
+UNAVAILABLE = "unavailable"
+
+
 class LinkUnresolved(Exception):
     """A link this platform owns, whose shortlink could not be followed.
 
@@ -58,9 +70,29 @@ class LinkUnresolved(Exception):
     never fails this way.
     """
 
-    def __init__(self, url: str) -> None:
-        super().__init__(f"could not resolve {url}")
+    def __init__(self, url: str, reason: str = UNAVAILABLE) -> None:
+        super().__init__(f"could not resolve {url} ({reason})")
         self.url = url
+        self.reason = reason
+
+    @property
+    def refused(self) -> bool:
+        return self.reason == REFUSED
+
+
+class UpstreamRefused(Exception):
+    """Every source for a post turned us away, rather than answering emptily.
+
+    The distinction is the whole point. A post with no media and a post we were
+    not allowed to look at both used to arrive as a `Resolution` with no items,
+    and the user was told the post was "deleted, private, or age-restricted"
+    for a post that was none of those things and a wall that was ours.
+    """
+
+    def __init__(self, post_id: str, status: int = 0) -> None:
+        super().__init__(f"every source refused {post_id} (last status {status})")
+        self.post_id = post_id
+        self.status = status
 
 
 @dataclass(frozen=True)

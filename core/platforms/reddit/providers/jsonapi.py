@@ -22,16 +22,15 @@ import httpx
 
 from core.models import PHOTO, VIDEO, MediaItem, Variant
 
-from .. import dash
-from ..headers import HEADERS
+from ...base import UpstreamRefused
+from .. import dash, relay
 
 log = logging.getLogger(__name__)
 
 ENDPOINT = "https://www.reddit.com/comments/{post_id}/.json"
 
-# The header set Reddit answers, shared with the other provider and with the
-# share-link redirect. See `..headers` for why it is exactly this and no more.
-_HEADERS = HEADERS
+# See oldhtml: a refusal is not a miss, and must not fall through as one.
+_REFUSALS = frozenset({401, 403, 429})
 
 
 def _post_data(payload: Any) -> Optional[dict[str, Any]]:
@@ -128,16 +127,32 @@ async def parse(
 
 async def fetch(post_id: str, client: httpx.AsyncClient) -> dict[str, Any]:
     try:
-        response = await client.get(
-            ENDPOINT.format(post_id=post_id), headers=_HEADERS, timeout=15.0,
-            follow_redirects=True,
-        )
-        response.raise_for_status()
-        payload = response.json()
+        response = await relay.get(ENDPOINT.format(post_id=post_id), client)
     except httpx.HTTPError as exc:
-        # 403 here is routine rate limiting, not a bug.
         log.info("reddit json fetch failed for %s: %s", post_id, exc)
         return {}
+
+    # 403 here was long treated as routine rate limiting and swallowed. It is
+    # also exactly what a blocked address gets, forever, and swallowing it is
+    # what turned a wall into "there's nothing in that post".
+    if response.status_code in _REFUSALS:
+        # INFO, not WARNING: this endpoint is refused in bursts as a matter of
+        # course, and through a relay it may be refused permanently while the
+        # HTML page sails through. The chain treats one refusal as survivable,
+        # so a line per lookup here would be noise standing in front of the
+        # WARNING that matters, which is every source refusing at once.
+        log.info(
+            "reddit json refused %s (%d)%s",
+            post_id, response.status_code, " via relay" if relay.enabled() else "",
+        )
+        raise UpstreamRefused(post_id, response.status_code)
+
+    if response.is_error:
+        log.info("reddit json answered %d for %s", response.status_code, post_id)
+        return {}
+
+    try:
+        payload = response.json()
     except ValueError as exc:
         log.warning("reddit json returned non-JSON for %s: %s", post_id, exc)
         return {}
